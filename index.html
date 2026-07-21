@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phantom Lua API Documentation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <h1 class="logo">Phantom</h1>
+                <p class="tagline">Lua API Documentation</p>
+            </div>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Buscar..." class="search-input">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                </svg>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-layout">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-content" id="sidebarContent">
+                <!-- Será preenchido por JavaScript -->
+            </div>
+        </nav>
+
+        <!-- Content Area -->
+        <main class="content">
+            <!-- Getting Started -->
+            <section id="intro" class="section">
+                <h2>Introdução</h2>
+                <p>Phantom proporciona um poderoso mecanismo de scripts Lua com uma API completa para:</p>
+                <ul class="feature-list">
+                    <li>Manipulação de objetos de jogo através do sistema de instâncias</li>
+                    <li>Desenho de baixo nível com formas, texto e linhas</li>
+                    <li>Widgets UI interativos e menus</li>
+                    <li>Serviços para players, workspace, lighting e muito mais</li>
+                </ul>
+            </section>
+
+            <!-- Lua VM -->
+            <section id="lua-vm" class="section">
+                <h2>Lua Virtual Machine</h2>
+                <p>Gerenciamento do motor Lua e execução de scripts.</p>
+
+                <div class="api-group">
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">bool initialize()</code>
+                            <span class="api-badge">VM</span>
+                        </div>
+                        <p class="api-desc">Inicializa a Lua VM. Deve ser chamado antes de executar qualquer script.</p>
+                        <p class="api-return"><strong>Retorna:</strong> true se bem-sucedido</p>
+                        <div class="code-block">
+                            <pre><code>if (lua_vm::initialize()) {
+    // VM está pronta
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">bool is_ready()</code>
+                            <span class="api-badge">VM</span>
+                        </div>
+                        <p class="api-desc">Verifica se a Lua VM está inicializada e pronta.</p>
+                        <p class="api-return"><strong>Retorna:</strong> true se pronta</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">bool execute_string(const std::string& script, const std::string& chunk_name = "lua_script")</code>
+                            <span class="api-badge">VM</span>
+                        </div>
+                        <p class="api-desc">Executa código Lua de uma string.</p>
+                        <p class="api-params"><strong>Parâmetros:</strong> script (código Lua), chunk_name (nome para debug)</p>
+                        <div class="code-block">
+                            <pre><code>lua_vm::execute_string("print('Hello, Lua!')");
+lua_vm::execute_string("x = 42", "meu_chunk");</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">bool execute_file(const std::filesystem::path& file_path)</code>
+                            <span class="api-badge">VM</span>
+                        </div>
+                        <p class="api-desc">Executa código Lua de um arquivo.</p>
+                        <p class="api-params"><strong>Parâmetros:</strong> file_path (caminho para arquivo .lua)</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">void on_frame(float delta_time)</code>
+                            <span class="api-badge">VM</span>
+                        </div>
+                        <p class="api-desc">Chamado a cada frame. Coloque isto no seu game loop.</p>
+                        <div class="code-block">
+                            <pre><code>while (jogo_rodando) {
+    float delta = calcular_delta_time();
+    lua_vm::on_frame(delta);
+    renderizar_frame();
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Instance System -->
+            <section id="instances" class="section">
+                <h2>Sistema de Instâncias</h2>
+                <p>Modelo de objeto hierárquico para organizar objetos do jogo. Todos os objetos herdam de <code>instance</code>.</p>
+
+                <h3>Propriedades Básicas</h3>
+                <div class="api-group">
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">std::string get_name() const</code>
+                            <span class="api-badge">Instance</span>
+                        </div>
+                        <p class="api-desc">Obtém o nome da instância.</p>
+                        <div class="code-block">
+                            <pre><code>local player = workspace:FindFirstChild("Player1")
+print(player:GetName())  -- Output: Player1</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">void set_name(const std::string& name)</code>
+                            <span class="api-badge">Instance</span>
+                        </div>
+                        <p class="api-desc">Define o nome da instância.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">std::string get_class_name() const</code>
+                            <span class="api-badge">Instance</span>
+                        </div>
+                        <p class="api-desc">Obtém o nome da classe.</p>
+                    </div>
+                </div>
+
+                <h3>Relacionamentos Parent-Child</h3>
+                <div class="api-group">
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">std::vector&lt;std::shared_ptr&lt;instance&gt;&gt; get_children() const</code>
+                            <span class="api-badge">Instance</span>
+                        </div>
+                        <p class="api-desc">Obtém todos os filhos diretos.</p>
+                        <div class="code-block">
+                            <pre><code>local children = workspace:GetChildren()
+for _, child in ipairs(children) do
+    print(child:GetName())
+end</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">std::shared_ptr&lt;instance&gt; find_first_child(const std::string& name) const</code>
+                            <span class="api-badge">Instance</span>
+                        </div>
+                        <p class="api-desc">Encontra o primeiro filho direto por nome.</p>
+                        <div class="code-block">
+                            <pre><code>local player = workspace:FindFirstChild("Player1")</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">std::shared_ptr&lt;instance&gt; find_first_descendant(const std::string& name) const</code>
+                            <span class="api-badge">Instance</span>
+                        </div>
+                        <p class="api-desc">Encontra o primeiro descendente em qualquer profundidade.</p>
+                    </div>
+                </div>
+
+                <h3>Atributos</h3>
+                <div class="api-group">
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">void set_attribute(const std::string& key, const attribute_value& value)</code>
+                            <span class="api-badge">Instance</span>
+                        </div>
+                        <p class="api-desc">Define um atributo. Tipos: bool, double, string, null.</p>
+                        <div class="code-block">
+                            <pre><code>player:SetAttribute("health", 100.0)
+player:SetAttribute("team", "red")
+player:SetAttribute("active", true)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">std::optional&lt;attribute_value&gt; get_attribute(const std::string& key) const</code>
+                            <span class="api-badge">Instance</span>
+                        </div>
+                        <p class="api-desc">Obtém um valor de atributo.</p>
+                        <div class="code-block">
+                            <pre><code>local valor = player:GetAttribute("health")
+if valor then
+    print("Saúde: " .. valor)
+end</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Drawing API -->
+            <section id="drawing" class="section">
+                <h2>Drawing API</h2>
+                <p>Primitivos de desenho de baixo nível para renderizar na tela.</p>
+
+                <div class="api-group">
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">std::shared_ptr&lt;drawing_object&gt; create_object(const std::string& type_name)</code>
+                            <span class="api-badge">Drawing</span>
+                        </div>
+                        <p class="api-desc">Cria um objeto desenhável.</p>
+                        <p class="api-params"><strong>Tipos:</strong> "square", "text", "line"</p>
+                        <div class="code-block">
+                            <pre><code>-- Criar um quadrado
+local box = drawing.create_object("square")
+box.position.x = 100
+box.position.y = 100
+box.size.x = 50
+box.size.y = 50
+box.color = {r=1, g=0, b=0, a=1}
+box.filled = true</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">std::shared_ptr&lt;drawing_object&gt; find_object(int object_id)</code>
+                            <span class="api-badge">Drawing</span>
+                        </div>
+                        <p class="api-desc">Encontra um objeto desenhável por ID.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">bool remove_object(int object_id)</code>
+                            <span class="api-badge">Drawing</span>
+                        </div>
+                        <p class="api-desc">Remove um objeto desenhável.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">void render_all()</code>
+                            <span class="api-badge">Drawing</span>
+                        </div>
+                        <p class="api-desc">Renderiza todos os objetos visíveis.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">void clear_all()</code>
+                            <span class="api-badge">Drawing</span>
+                        </div>
+                        <p class="api-desc">Remove todos os objetos desenhados.</p>
+                    </div>
+                </div>
+
+                <h3>Propriedades de Objects</h3>
+                <div class="properties-grid">
+                    <div class="prop">
+                        <code>position</code>
+                        <p>Coordenadas X, Y</p>
+                    </div>
+                    <div class="prop">
+                        <code>size</code>
+                        <p>Largura e altura</p>
+                    </div>
+                    <div class="prop">
+                        <code>color</code>
+                        <p>Cor RGBA (0-1)</p>
+                    </div>
+                    <div class="prop">
+                        <code>thickness</code>
+                        <p>Espessura de linha</p>
+                    </div>
+                    <div class="prop">
+                        <code>filled</code>
+                        <p>Preencher forma</p>
+                    </div>
+                    <div class="prop">
+                        <code>z_index</code>
+                        <p>Ordem de desenho</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- UI Widgets -->
+            <section id="ui" class="section">
+                <h2>UI Widget System</h2>
+                <p>Crie elementos de interface interativos.</p>
+
+                <h3>Gerenciamento de Abas</h3>
+                <div class="api-group">
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">int create_tab(const std::string& name)</code>
+                            <span class="api-badge">UI</span>
+                        </div>
+                        <p class="api-desc">Cria uma nova aba de UI.</p>
+                        <div class="code-block">
+                            <pre><code>local tab_id = ui.create_tab("Configurações")
+print("Aba criada: " .. tab_id)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">bool remove_tab(int tab_id)</code>
+                            <span class="api-badge">UI</span>
+                        </div>
+                        <p class="api-desc">Remove uma aba e todos seus widgets.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">std::vector&lt;tab_descriptor&gt; get_tabs_snapshot()</code>
+                            <span class="api-badge">UI</span>
+                        </div>
+                        <p class="api-desc">Obtém todas as abas atuais.</p>
+                    </div>
+                </div>
+
+                <h3>Tipos de Widgets</h3>
+                <div class="widgets-grid">
+                    <div class="widget-card">
+                        <h4>Checkbox</h4>
+                        <p>Toggle booleano</p>
+                        <code>add_checkbox_widget(tab, key, label, default)</code>
+                    </div>
+                    <div class="widget-card">
+                        <h4>Slider</h4>
+                        <p>Deslizador numérico</p>
+                        <code>add_slider_widget(tab, key, label, min, max, default)</code>
+                    </div>
+                    <div class="widget-card">
+                        <h4>Dropdown</h4>
+                        <p>Seleção única</p>
+                        <code>add_dropdown_widget(tab, key, label, options, index)</code>
+                    </div>
+                    <div class="widget-card">
+                        <h4>Button</h4>
+                        <p>Botão clicável</p>
+                        <code>add_button_widget(tab, key, label, callback)</code>
+                    </div>
+                    <div class="widget-card">
+                        <h4>ColorPicker</h4>
+                        <p>Seleção de cor</p>
+                        <code>add_colorpicker_widget(tab, key, label, color)</code>
+                    </div>
+                    <div class="widget-card">
+                        <h4>InputText</h4>
+                        <p>Campo de texto</p>
+                        <code>add_input_text_widget(tab, key, label, default)</code>
+                    </div>
+                </div>
+
+                <h3>Valores de Widget</h3>
+                <div class="api-group">
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">bool get_widget_value(int tab_id, const std::string& key, widget_value& out_value)</code>
+                            <span class="api-badge">UI</span>
+                        </div>
+                        <p class="api-desc">Obtém o valor atual de um widget.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">bool set_widget_value(int tab_id, const std::string& key, const widget_value& in_value)</code>
+                            <span class="api-badge">UI</span>
+                        </div>
+                        <p class="api-desc">Define o valor de um widget.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Services -->
+            <section id="services" class="section">
+                <h2>Services</h2>
+                <p>Serviços globais fornecendo acesso aos principais sistemas do jogo.</p>
+
+                <div class="services-grid">
+                    <div class="service-card">
+                        <h4>Players Service</h4>
+                        <p>Acesso ao gerenciamento de players e informações.</p>
+                        <code>game:GetService("Players")</code>
+                    </div>
+                    <div class="service-card">
+                        <h4>Workspace Service</h4>
+                        <p>Acesso ao mundo do jogo e ambiente.</p>
+                        <code>game:GetService("Workspace")</code>
+                    </div>
+                    <div class="service-card">
+                        <h4>RunService</h4>
+                        <p>Eventos baseados em frames e timing.</p>
+                        <code>game:GetService("RunService")</code>
+                    </div>
+                    <div class="service-card">
+                        <h4>Lighting Service</h4>
+                        <p>Controle de iluminação e efeitos visuais.</p>
+                        <code>game:GetService("Lighting")</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Examples -->
+            <section id="examples" class="section">
+                <h2>Exemplos de Código</h2>
+
+                <h3>Criar Painel de Configurações</h3>
+                <div class="code-block">
+                    <pre><code>-- Crear aba de configurações
+local tab = UI:CreateTab("Configurações")
+
+-- Adicionar controles
+UI:AddCheckboxWidget(tab, "esp_enabled", "Ativar ESP", true)
+UI:AddSliderWidget(tab, "distance", "Distância", 0, 500, 250)
+
+local options = {"Baixo", "Médio", "Alto"}
+UI:AddDropdownWidget(tab, "quality", "Qualidade", options, 1)
+
+-- Obter valores
+local valor = {}
+UI:GetWidgetValue(tab, "esp_enabled", valor)
+print("ESP: " .. tostring(valor.bool_value))</code></pre>
+                </div>
+
+                <h3>Desenhar na Tela</h3>
+                <div class="code-block">
+                    <pre><code>-- Criar caixa vermelha
+local box = Drawing:CreateObject("square")
+box.position = {x = 100, y = 100}
+box.size = {x = 150, y = 100}
+box.color = {r = 1, g = 0, b = 0, a = 1}
+box.thickness = 2
+box.filled = false
+
+-- Criar texto
+local text = Drawing:CreateObject("text")
+text.position = {x = 110, y = 110}
+text.text = "PLAYER 1"
+text.text_size = 16
+text.color = {r = 1, g = 1, b = 1, a = 1}
+
+-- Renderizar
+Drawing:RenderAll()</code></pre>
+                </div>
+
+                <h3>Trabalhar com Instâncias</h3>
+                <div class="code-block">
+                    <pre><code>-- Obter workspace
+local workspace = game:GetService("Workspace")
+
+-- Encontrar player
+local player = workspace:FindFirstChild("Player1")
+if player then
+    print("Encontrado: " .. player:GetName())
+
+    -- Definir atributos
+    player:SetAttribute("health", 100)
+    player:SetAttribute("team", "red")
+
+    -- Obter todos os filhos
+    local children = player:GetChildren()
+    for _, child in ipairs(children) do
+        print("Filho: " .. child:GetName())
+    end
+end</code></pre>
+                </div>
+            </section>
+
+            <!-- Reference -->
+            <section id="reference" class="section">
+                <h2>Referência de Estruturas</h2>
+
+                <h3>Color Value</h3>
+                <div class="code-block">
+                    <pre><code>struct color_value {
+    float r = 1.0f;  // Vermelho (0.0 - 1.0)
+    float g = 1.0f;  // Verde (0.0 - 1.0)
+    float b = 1.0f;  // Azul (0.0 - 1.0)
+    float a = 1.0f;  // Alpha (0.0 - 1.0)
+};</code></pre>
+                </div>
+
+                <h3>Vector2 Value</h3>
+                <div class="code-block">
+                    <pre><code>struct vector2_value {
+    float x = 0.0f;
+    float y = 0.0f;
+};</code></pre>
+                </div>
+
+                <h3>Keybind Value</h3>
+                <div class="code-block">
+                    <pre><code>struct keybind_value {
+    int key = 0;           // Código de tecla virtual
+    int mode = 0;          // Modo de ligação
+    bool enabled = false;  // Estado ativo
+};</code></pre>
+                </div>
+            </section>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <p>&copy; 2024 Fragment Lua API Documentation v1.0</p>
+            </footer>
+        </main>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>

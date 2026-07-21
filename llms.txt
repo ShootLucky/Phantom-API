@@ -1,0 +1,470 @@
+# Fragment Lua API - Complete Reference
+# Version 1.0
+# Generated Documentation
+
+This is the complete reference for the Fragment Lua scripting API.
+
+## GETTING STARTED
+
+Fragment provides a powerful Lua scripting engine with:
+- Game object manipulation (Instance system)
+- Low-level drawing (shapes, text, lines)
+- Interactive UI widgets
+- Global services (Players, Workspace, Lighting, RunService)
+
+All Lua code runs in a sandboxed environment with external emulation of Roblox-like APIs.
+
+---
+
+## LUA VM - Script Execution
+
+Namespace: lua_vm
+
+### bool initialize()
+Initializes the Lua virtual machine.
+Returns: true if successful, false otherwise.
+Must be called before executing any scripts.
+
+### void shutdown()
+Gracefully shuts down the Lua VM and releases resources.
+
+### bool is_ready()
+Checks if the Lua VM is initialized and ready.
+Returns: true if ready, false otherwise.
+
+### bool execute_string(const std::string& script, const std::string& chunk_name = "lua_script")
+Executes Lua code from a string.
+Parameters:
+  - script (string): Lua code to execute
+  - chunk_name (string, optional): Debug name for the code chunk
+Returns: true if execution succeeded, false on error.
+
+### bool execute_file(const std::filesystem::path& file_path)
+Executes Lua code from a file.
+Parameters:
+  - file_path (path): Full path to .lua file
+Returns: true if execution succeeded, false if file not found or has errors.
+
+### void on_frame(float delta_time)
+Called every frame to update Lua state. Call from your main game loop.
+Parameters:
+  - delta_time (float): Time elapsed since last frame in seconds
+
+### void render_editor_window(bool menu_has_frame, const ImVec2& menu_pos, const ImVec2& menu_size)
+Renders the Lua editor window in ImGui.
+Parameters:
+  - menu_has_frame (bool): Whether the menu has a frame
+  - menu_pos (ImVec2): Position on screen
+  - menu_size (ImVec2): Size of the window
+
+### void render_console_window(bool menu_has_frame, const ImVec2& menu_pos, const ImVec2& menu_size)
+Renders the Lua console window in ImGui.
+
+---
+
+## INSTANCE SYSTEM - Game Objects
+
+Namespace: sandbox
+
+All game objects inherit from the instance base class.
+Instances form a hierarchical parent-child tree structure.
+
+### Basic Properties
+
+std::string get_name() const
+Gets the instance name.
+
+void set_name(const std::string& name)
+Sets the instance name.
+
+std::string get_class_name() const
+Gets the class type name.
+
+### Parent-Child Hierarchy
+
+std::shared_ptr<instance> get_parent() const
+Gets the parent instance.
+Returns: Parent instance or nullptr if no parent exists.
+
+bool set_parent(const std::shared_ptr<instance>& parent)
+Sets the parent instance.
+Prevents circular/cyclic relationships.
+Returns: false if operation would create a cycle.
+
+std::vector<std::shared_ptr<instance>> get_children() const
+Gets all direct children of this instance.
+
+std::vector<std::shared_ptr<instance>> get_descendants() const
+Gets all descendants recursively (children, grandchildren, etc).
+
+### Finding Instances
+
+std::shared_ptr<instance> find_first_child(const std::string& name) const
+Finds first direct child by name.
+Returns: Child instance or nullptr if not found.
+
+std::shared_ptr<instance> find_first_descendant(const std::string& name) const
+Finds first descendant at any depth by name.
+Returns: Descendant instance or nullptr if not found.
+
+bool is_descendant_of(const std::shared_ptr<instance>& ancestor) const
+Checks if this instance is a descendant of another.
+Returns: true if is a descendant.
+
+bool is_ancestor_of(const std::shared_ptr<instance>& descendant) const
+Checks if this instance is an ancestor of another.
+Returns: true if is an ancestor.
+
+std::shared_ptr<instance> wait_for_child(const std::string& name, double timeout_seconds)
+Waits for a child to appear with optional timeout.
+Parameters:
+  - name (string): Name of child to wait for
+  - timeout_seconds (double): Maximum wait time in seconds
+Returns: Child instance or nullptr if timeout expires.
+
+### Attributes
+
+void set_attribute(const std::string& key, const attribute_value& value)
+Sets an attribute. Supported types: bool, double, string, null.
+
+std::optional<attribute_value> get_attribute(const std::string& key) const
+Gets an attribute value.
+Returns: Optional containing value if exists, empty optional otherwise.
+
+std::unordered_map<std::string, attribute_value> get_attributes() const
+Gets all attributes.
+Returns: Map of key-value pairs.
+
+---
+
+## DRAWING API - Rendering Primitives
+
+Namespace: lua_drawing
+
+### Drawing Objects
+
+std::shared_ptr<drawing_object> create_object(const std::string& type_name)
+Creates a drawable object.
+Parameters:
+  - type_name (string): "square", "text", or "line"
+Returns: Pointer to created drawing_object or nullptr on failure.
+
+std::shared_ptr<drawing_object> find_object(int object_id)
+Finds a drawable object by ID.
+Returns: Pointer to object or nullptr if not found.
+
+bool remove_object(int object_id)
+Removes a drawable object.
+Returns: true if removed, false otherwise.
+
+void clear_all()
+Removes all drawable objects.
+
+void render_all()
+Renders all visible drawable objects to screen.
+
+### Drawing Object Properties
+
+All drawable objects have these properties:
+
+id (int): Unique identifier
+type (object_type): Type of drawing object
+removed (bool): Whether the object is removed
+visible (bool): Show/hide flag
+color (color_value): RGBA color
+transparency (float): Alpha transparency (0.0 - 1.0)
+thickness (float): Line/border thickness
+z_index (int): Drawing order (higher = on top)
+position (vector2_value): X, Y screen coordinates
+size (vector2_value): Width and height
+filled (bool): Whether shape is filled
+text (string): Text content (for text objects)
+text_size (float): Font size in pixels
+center (bool): Center alignment for text
+from (vector2_value): Start point for lines
+to (vector2_value): End point for lines
+
+### Structures
+
+struct color_value
+{
+	float r = 1.0f;   // Red (0.0 - 1.0)
+	float g = 1.0f;   // Green (0.0 - 1.0)
+	float b = 1.0f;   // Blue (0.0 - 1.0)
+	float a = 1.0f;   // Alpha (0.0 - 1.0)
+};
+
+struct vector2_value
+{
+	float x = 0.0f;
+	float y = 0.0f;
+};
+
+enum class object_type
+{
+	unknown,
+	square,
+	text,
+	line
+};
+
+---
+
+## UI WIDGET SYSTEM - Interactive Controls
+
+Namespace: lua_ui
+
+### Tab Management
+
+int create_tab(const std::string& name)
+Creates a new UI tab.
+Returns: Tab ID or negative value on failure.
+
+bool remove_tab(int tab_id)
+Removes a tab and all its widgets.
+Returns: true if successful.
+
+bool set_tab_name(int tab_id, const std::string& name)
+Renames a tab.
+Returns: true if successful.
+
+bool find_tab_id_by_name(const std::string& name, int& out_tab_id)
+Finds a tab by name.
+Returns: true if found, false otherwise.
+
+std::vector<tab_descriptor> get_tabs_snapshot()
+Gets all current tabs.
+Returns: Vector of tab descriptors.
+
+void clear_tab_widgets(int tab_id)
+Removes all widgets from a tab.
+
+### Widget Types
+
+CHECKBOX: bool add_checkbox_widget(tab_id, key, label, default_value)
+SLIDER: bool add_slider_widget(tab_id, key, label, min_val, max_val, default_val)
+DROPDOWN: bool add_dropdown_widget(tab_id, key, label, options, default_index)
+MULTI_DROPDOWN: bool add_multi_dropdown_widget(tab_id, key, label, options, default_values)
+KEYBIND: bool add_keybind_widget(tab_id, key, label, default_key, default_mode)
+COLORPICKER: bool add_colorpicker_widget(tab_id, key, label, default_color)
+BUTTON: bool add_button_widget(tab_id, key, label, callback_ref)
+INPUT_TEXT: bool add_input_text_widget(tab_id, key, label, default_value)
+
+All widget creation functions return true on success, false on failure.
+
+### Widget Values
+
+bool get_widget_value(int tab_id, const std::string& key, widget_value& out_value)
+Gets the current value of a widget.
+Returns: true if found, false otherwise.
+
+bool set_widget_value(int tab_id, const std::string& key, const widget_value& in_value)
+Sets a widget's value.
+Returns: true if successful.
+
+void render_tab_widgets(int tab_id)
+Renders all widgets in a tab.
+
+std::vector<int> take_pending_button_callbacks()
+Gets all buttons clicked this frame.
+
+### Structures
+
+enum class widget_type
+{
+	checkbox,
+	slider,
+	dropdown,
+	multi_dropdown,
+	keybind,
+	colorpicker,
+	button,
+	input_text
+};
+
+enum class value_type
+{
+	none,
+	boolean,
+	number,
+	integer,
+	string,
+	color,
+	keybind,
+	boolean_list
+};
+
+struct widget_value
+{
+	value_type type;
+	bool bool_value;
+	float number_value;
+	int int_value;
+	std::string string_value;
+	color_value color;
+	keybind_value keybind;
+	std::vector<bool> bool_list_value;
+};
+
+struct tab_descriptor
+{
+	int id;
+	std::string name;
+};
+
+struct keybind_value
+{
+	int key;        // Virtual key code
+	int mode;       // Binding mode
+	bool enabled;   // Active state
+};
+
+---
+
+## SERVICES - Game Systems
+
+Namespace: sandbox
+
+### Players Service
+std::shared_ptr<instance> create_players_service()
+Access player management and information.
+
+### Workspace Service
+std::shared_ptr<instance> create_workspace_service()
+Access the game world and environment.
+
+### RunService
+std::shared_ptr<instance> create_run_service()
+Frame-based event handling and timing.
+
+### Lighting Service
+std::shared_ptr<instance> create_lighting_service()
+Lighting and visual effects control.
+
+All services inherit from the instance base class.
+
+---
+
+## ATTRIBUTE DATA TYPE
+
+using attribute_value = std::variant<std::monostate, bool, double, std::string>;
+
+Supported attribute types:
+- std::monostate: Null or empty value
+- bool: Boolean true/false
+- double: Numeric floating-point value
+- std::string: Text string
+
+---
+
+## COMMON PATTERNS
+
+### Initialize and Execute Script
+if (lua_vm::initialize()) {
+	lua_vm::execute_string("print('Hello')");
+	lua_vm::on_frame(0.016f);  // ~60 FPS
+	lua_vm::shutdown();
+}
+
+### Create UI Tab with Widgets
+local tab = UI:CreateTab("Settings")
+UI:AddCheckboxWidget(tab, "enabled", "Enable", true)
+UI:AddSliderWidget(tab, "value", "Value", 0, 100, 50)
+
+### Get Widget Value
+local value = {}
+if UI:GetWidgetValue(tab, "enabled", value) then
+	if value.type == "boolean" then
+		print("Enabled: " .. tostring(value.bool_value))
+	end
+end
+
+### Draw Shapes
+local box = Drawing:CreateObject("square")
+box.position = {x = 100, y = 100}
+box.size = {x = 150, y = 100}
+box.color = {r = 1, g = 0, b = 0, a = 1}
+box.filled = false
+Drawing:RenderAll()
+
+### Access Instances
+local workspace = game:GetService("Workspace")
+local player = workspace:FindFirstChild("Player1")
+if player then
+	player:SetAttribute("health", 100)
+	print(player:GetAttribute("health"))
+end
+
+---
+
+## FRAGMENT LUA API QUICK REFERENCE
+
+## Common Functions by Category
+
+### Initialization & Execution
+- lua_vm::initialize() → bool
+- lua_vm::shutdown() → void
+- lua_vm::is_ready() → bool
+- lua_vm::execute_string(script, chunk_name) → bool
+- lua_vm::execute_file(path) → bool
+- lua_vm::on_frame(delta_time) → void
+
+### Instance Navigation
+- get_parent() → instance*
+- set_parent(parent) → bool
+- get_children() → vector<instance*>
+- get_descendants() → vector<instance*>
+- find_first_child(name) → instance*
+- find_first_descendant(name) → instance*
+
+### Instance Properties
+- get_name() → string
+- set_name(name) → void
+- get_class_name() → string
+- get_attribute(key) → optional<value>
+- set_attribute(key, value) → void
+- get_attributes() → map<string, value>
+
+### Drawing
+- create_object(type) → drawing_object*
+- find_object(id) → drawing_object*
+- remove_object(id) → bool
+- render_all() → void
+- clear_all() → void
+
+### UI - Tabs
+- create_tab(name) → int (tab_id)
+- remove_tab(tab_id) → bool
+- set_tab_name(tab_id, name) → bool
+- get_tabs_snapshot() → vector<tab_descriptor>
+- clear_tab_widgets(tab_id) → void
+
+### UI - Widgets
+- add_checkbox_widget(tab, key, label, default) → bool
+- add_slider_widget(tab, key, label, min, max, default) → bool
+- add_dropdown_widget(tab, key, label, options, index) → bool
+- add_multi_dropdown_widget(tab, key, label, options, values) → bool
+- add_keybind_widget(tab, key, label, key, mode) → bool
+- add_colorpicker_widget(tab, key, label, color) → bool
+- add_button_widget(tab, key, label, callback) → bool
+- add_input_text_widget(tab, key, label, default) → bool
+
+### UI - Values
+- get_widget_value(tab, key, value) → bool
+- set_widget_value(tab, key, value) → bool
+- render_tab_widgets(tab) → void
+- take_pending_button_callbacks() → vector<int>
+
+### Services
+- game:GetService("Players") → players_service*
+- game:GetService("Workspace") → workspace_service*
+- game:GetService("RunService") → run_service*
+- game:GetService("Lighting") → lighting_service*
+
+---
+
+## END OF FRAGMENT LUA API REFERENCE
+
+For complete examples and detailed explanations, visit the HTML documentation.
+Last updated: 2024
+Version: 1.0

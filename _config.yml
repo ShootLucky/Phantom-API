@@ -1,0 +1,70 @@
+# GitHub Pages Configuration
+# Place this as _config.yml in your docs directory
+
+title: Fragment Lua API Documentation
+description: Complete reference for Fragment Lua scripting system
+theme: jekyll-theme-minimal
+
+# Navigation
+navigation:
+  - name: Home
+    path: /
+  - name: Lua VM
+    path: "#lua-vm"
+  - name: Instance System
+    path: "#instance-system"
+  - name: Drawing API
+    path: "#drawing-api"
+  - name: UI Widgets
+    path: "#ui-api"
+
+# Site URL
+url: "https://yourusername.github.io"
+baseurl: "/fragment/docs"
+
+# Markdown processor
+markdown: kramdown
+highlighter: rouge
+
+# Analytics
+google_analytics: ""
+
+# Social links
+github_username: yourusername
+twitter_username: 
+
+# Build settings
+sass:
+  sass_dir: _sass
+keep_files:
+  - .well-known
+  - style.css
+  - script.js
+
+# Include
+include:
+  - _pages
+
+# Exclude
+exclude:
+  - .jekyll-cache
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+
+# Collections
+collections:
+  docs:
+    output: true
+    permalink: /:collection/:name
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
