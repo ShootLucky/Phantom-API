@@ -115,99 +115,6 @@ lua_vm::execute_string("x = 42", "meu_chunk");</code></pre>
                 </div>
             </section>
 
-            <!-- Garbage Collector API -->
-            <section id="gc-api" class="section">
-                <h2 id="gcTitle">Garbage Collector API</h2>
-                <p id="gcDesc">Encontre e modifique valores armazenados no garbage collector do Lua por nome, como estatísticas de armas e outros valores armazenados em tabelas Lua.</p>
-
-                <h3>getgc</h3>
-                <div class="api-group">
-                    <div class="api-item">
-                        <div class="api-header">
-                            <code class="api-sig">getgc(name?: string | { string }): { table }</code>
-                            <span class="api-badge">GC</span>
-                        </div>
-                        <p class="api-desc">Varre <code>_G</code> (tabela global), o registry Lua e todas as metatables recursivamente. Quando chamada sem argumentos, retorna todas as entradas com chave string encontradas. Quando chamada com nomes, retorna apenas entradas cuja chave corresponda a um dos nomes fornecidos.</p>
-                        <p class="api-params"><strong>Parâmetros:</strong> name (string ou table de strings, opcional) — nome(s) para buscar. Se omitido, retorna tudo.</p>
-                        <p class="api-return"><strong>Retorna:</strong> Array de entradas, cada uma é uma tabela com:</p>
-                        <ul>
-                            <li><code>key</code> — o nome sob o qual o valor foi encontrado</li>
-                            <li><code>value</code> — o valor atual (number ou string, se aplicável)</li>
-                            <li><code>type</code> — o tipo do valor (number, string, boolean, table, function, userdata, ...)</li>
-                            <li><code>addr</code> — endereço de memória do valor</li>
-                        </ul>
-                        <p>O mesmo nome pode ser armazenado em vários lugares, então múltiplas entradas são normais. Retorna uma tabela vazia se nada for encontrado.</p>
-                        <div class="code-block">
-                            <pre><code>-- Todas as globais + registry
-local all = getgc()
-for _, entry in ipairs(all) do
-    print(entry.key, entry.type)
-end
-
--- Buscar uma única chave
-local results = getgc("FireRate")
-for _, entry in ipairs(results) do
-    print(entry.key, entry.value, entry.type)
-end
-
--- Buscar múltiplas chaves
-local results = getgc({ "FireRate", "SpreadAngle", "MagAmmo" })
-for _, entry in ipairs(results) do
-    print(entry.key, "=", entry.value)
-end</code></pre>
-                        </div>
-                    </div>
-                </div>
-
-                <h3>setgc</h3>
-                <div class="api-group">
-                    <div class="api-item">
-                        <div class="api-header">
-                            <code class="api-sig">setgc(key: string, value: Any): int</code>
-                            <span class="api-badge">GC</span>
-                        </div>
-                        <p class="api-desc">Define todos os valores garbage-collected armazenados sob <code>key</code> para <code>value</code>, fazendo varredura no collector a cada chamada. Passa uma tabela para definir múltiplas chaves de uma vez. Apenas valores cujo tipo corresponde a <code>value</code> são alterados.</p>
-                        <p class="api-return"><strong>Retorna:</strong> Número de valores definidos</p>
-                        <div class="code-block">
-                            <pre><code>-- Singular
-setgc("FireRate", 0)
-
--- Grupo
-setgc({
-    FireRate = 0,
-    SpreadAngle = 0,
-    CameraRecoilMult = 0,
-    MagAmmo = 999999
-})</code></pre>
-                        </div>
-                    </div>
-                </div>
-
-                <h3>applygc</h3>
-                <div class="api-group">
-                    <div class="api-item">
-                        <div class="api-header">
-                            <code class="api-sig">applygc(cache: table, key: string, value: Any): int</code>
-                            <span class="api-badge">GC</span>
-                        </div>
-                        <p class="api-desc">Igual ao <code>setgc</code>, mas aplica a um cache retornado por <code>getgc</code> em vez de fazer varredura novamente. Chame <code>getgc</code> uma vez e reutilize o cache com <code>applygc</code> ao definir valores repetidamente, como dentro de um loop ou para valores que o jogo continua redefinindo.</p>
-                        <p class="api-params"><strong>Parâmetros:</strong> cache (table do getgc), key/value ou table de key/values</p>
-                        <p class="api-return"><strong>Retorna:</strong> Número de valores definidos</p>
-                        <p>Rode <code>getgc</code> novamente para atualizar o cache se os valores forem reconstruídos, por exemplo ao respawnar ou trocar de arma.</p>
-                        <div class="code-block">
-                            <pre><code>local cache = getgc({ "FireRate", "SpreadAngle", "MagAmmo" })
-
--- Singular
-applygc(cache, "FireRate", 0)
-applygc(cache, "MagAmmo", 999999)
-
--- Grupo
-applygc(cache, { FireRate = 0, SpreadAngle = 0, MagAmmo = 999999 })</code></pre>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
             <!-- Instance System -->
             <section id="instances" class="section">
                 <h2 id="instanceTitle">Sistema de Instâncias</h2>
@@ -520,33 +427,6 @@ print("Aba criada: " .. tab_id)</code></pre>
             <!-- Examples -->
             <section id="examples" class="section">
                 <h2 id="examplesTitle">Exemplos de Código</h2>
-
-                <h3 id="examplesGC">Modificar Estatísticas de Arma via GC</h3>
-                <div class="code-block">
-                    <pre><code>-- Buscar valores no garbage collector
-local cache = getgc({ "FireRate", "SpreadAngle", "MagAmmo" })
-
--- Definir valores individuais
-applygc(cache, "FireRate", 0)
-applygc(cache, "MagAmmo", 999999)
-
--- Definir vários valores de uma vez
-applygc(cache, {
-    FireRate = 0,
-    SpreadAngle = 0,
-    CameraRecoilMult = 0,
-    MagAmmo = 999999
-})
-
--- Usar getgc + setgc diretamente (sem cache)
-setgc("FireRate", 0)
-setgc({
-    FireRate = 0,
-    SpreadAngle = 0,
-    CameraRecoilMult = 0,
-    MagAmmo = 999999
-})</code></pre>
-                </div>
 
                 <h3 id="examplesUI">Criar Painel de Configurações</h3>
                 <div class="code-block">

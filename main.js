@@ -27,9 +27,6 @@ const translations = {
         luaVMTitle: 'Lua Virtual Machine',
         luaVMDesc: 'Gerenciamento do motor Lua e execução de scripts.',
 
-        gcTitle: 'Garbage Collector API',
-        gcdDesc: 'Encontre e modifique valores armazenados no garbage collector do Lua por nome, como estatísticas de armas e outros valores armazenados em tabelas Lua.',
-
         instanceTitle: 'Sistema de Instâncias',
         instanceDesc: 'Modelo de objeto hierárquico para organizar objetos do jogo. Todos os objetos herdam de <code>instance</code>.',
         instanceBasicProps: 'Propriedades Básicas',
@@ -50,7 +47,6 @@ const translations = {
         servicesDesc: 'Serviços globais fornecendo acesso aos principais sistemas do jogo.',
 
         examplesTitle: 'Exemplos de Código',
-        examplesGC: 'Modificar Estatísticas de Arma via GC',
         examplesUI: 'Criar Painel de Configurações',
         examplesDrawing: 'Desenhar na Tela',
         examplesInstances: 'Trabalhar com Instâncias',
@@ -88,9 +84,6 @@ const translations = {
         luaVMTitle: 'Lua Virtual Machine',
         luaVMDesc: 'Lua engine management and script execution.',
 
-        gcTitle: 'Garbage Collector API',
-        gcdDesc: 'Find and modify values stored in the Lua garbage collector by name, such as weapon stats and other values stored in Lua tables.',
-
         instanceTitle: 'Instance System',
         instanceDesc: 'Hierarchical object model for organizing game objects. All objects inherit from <code>instance</code>.',
         instanceBasicProps: 'Basic Properties',
@@ -111,7 +104,6 @@ const translations = {
         servicesDesc: 'Global services providing access to core game systems.',
 
         examplesTitle: 'Code Examples',
-        examplesGC: 'Modify Weapon Stats via GC',
         examplesUI: 'Create Settings Panel',
         examplesDrawing: 'Drawing on Screen',
         examplesInstances: 'Working with Instances',
@@ -132,7 +124,6 @@ const navStructure = {
         { title: 'Getting Started', links: [{ name: 'Introdução', id: 'intro' }] },
         { title: 'Core Systems', links: [
             { name: 'Lua VM', id: 'lua-vm' },
-            { name: 'Garbage Collector', id: 'gc-api' },
             { name: 'Instance System', id: 'instances' }
         ]},
         { title: 'Rendering', links: [
@@ -149,7 +140,6 @@ const navStructure = {
         { title: 'Getting Started', links: [{ name: 'Introduction', id: 'intro' }] },
         { title: 'Core Systems', links: [
             { name: 'Lua VM', id: 'lua-vm' },
-            { name: 'Garbage Collector', id: 'gc-api' },
             { name: 'Instance System', id: 'instances' }
         ]},
         { title: 'Rendering', links: [
@@ -204,8 +194,6 @@ function applyTranslations() {
         introItem4: 'introItem4',
         luaVMTitle: 'luaVMTitle',
         luaVMDesc: 'luaVMDesc',
-        gcTitle: 'gcTitle',
-        gcDesc: 'gcdDesc',
         instanceTitle: 'instanceTitle',
         instanceDesc: 'instanceDesc',
         instanceBasicProps: 'instanceBasicProps',
@@ -222,7 +210,6 @@ function applyTranslations() {
         servicesTitle: 'servicesTitle',
         servicesDesc: 'servicesDesc',
         examplesTitle: 'examplesTitle',
-        examplesGC: 'examplesGC',
         examplesUI: 'examplesUI',
         examplesDrawing: 'examplesDrawing',
         examplesInstances: 'examplesInstances',
