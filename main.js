@@ -1,51 +1,255 @@
-// Navegação e estrutura do sidebar
-const navStructure = [
-    {
-        title: 'Getting Started',
-        links: [
-            { name: 'Introdução', id: 'intro' }
-        ]
+// ============ TRANSLATIONS ============
+const translations = {
+    pt: {
+        navGettingStarted: 'Getting Started',
+        navIntro: 'Introdução',
+        navCore: 'Core Systems',
+        navLuaVM: 'Lua VM',
+        navGC: 'Garbage Collector',
+        navInstances: 'Instance System',
+        navRendering: 'Rendering',
+        navDrawing: 'Drawing API',
+        navUI: 'UI Widgets',
+        navReference: 'Reference',
+        navServices: 'Services',
+        navExamples: 'Exemplos',
+        navStructs: 'Estruturas',
+
+        searchPlaceholder: 'Buscar...',
+
+        introTitle: 'Introdução',
+        introDesc: 'Fragment proporciona um poderoso mecanismo de scripts Lua com uma API completa para:',
+        introItem1: 'Manipulação de objetos de jogo através do sistema de instâncias',
+        introItem2: 'Desenho de baixo nível com formas, texto e linhas',
+        introItem3: 'Widgets UI interativos e menus',
+        introItem4: 'Serviços para players, workspace, lighting e muito mais',
+
+        luaVMTitle: 'Lua Virtual Machine',
+        luaVMDesc: 'Gerenciamento do motor Lua e execução de scripts.',
+
+        gcTitle: 'Garbage Collector API',
+        gcdDesc: 'Encontre e modifique valores armazenados no garbage collector do Lua por nome, como estatísticas de armas e outros valores armazenados em tabelas Lua.',
+
+        instanceTitle: 'Sistema de Instâncias',
+        instanceDesc: 'Modelo de objeto hierárquico para organizar objetos do jogo. Todos os objetos herdam de <code>instance</code>.',
+        instanceBasicProps: 'Propriedades Básicas',
+        instanceParentChild: 'Relacionamentos Parent-Child',
+        instanceAttributes: 'Atributos',
+
+        drawingTitle: 'Drawing API',
+        drawingDesc: 'Primitivos de desenho de baixo nível para renderizar na tela.',
+        drawingProps: 'Propriedades de Objects',
+
+        uiTitle: 'UI Widget System',
+        uiDesc: 'Crie elementos de interface interativos.',
+        uiTabMgmt: 'Gerenciamento de Abas',
+        uiWidgetTypes: 'Tipos de Widgets',
+        uiWidgetValues: 'Valores de Widget',
+
+        servicesTitle: 'Services',
+        servicesDesc: 'Serviços globais fornecendo acesso aos principais sistemas do jogo.',
+
+        examplesTitle: 'Exemplos de Código',
+        examplesGC: 'Modificar Estatísticas de Arma via GC',
+        examplesUI: 'Criar Painel de Configurações',
+        examplesDrawing: 'Desenhar na Tela',
+        examplesInstances: 'Trabalhar com Instâncias',
+
+        refTitle: 'Referência de Estruturas',
+
+        footerText: '&copy; 2024 Fragment Lua API Documentation v1.0',
+
+        langBtn: 'EN',
     },
-    {
-        title: 'Core Systems',
-        links: [
+    en: {
+        navGettingStarted: 'Getting Started',
+        navIntro: 'Introduction',
+        navCore: 'Core Systems',
+        navLuaVM: 'Lua VM',
+        navGC: 'Garbage Collector',
+        navInstances: 'Instance System',
+        navRendering: 'Rendering',
+        navDrawing: 'Drawing API',
+        navUI: 'UI Widgets',
+        navReference: 'Reference',
+        navServices: 'Services',
+        navExamples: 'Examples',
+        navStructs: 'Structures',
+
+        searchPlaceholder: 'Search...',
+
+        introTitle: 'Introduction',
+        introDesc: 'Fragment provides a powerful Lua scripting engine with a complete API for:',
+        introItem1: 'Game object manipulation through the instance system',
+        introItem2: 'Low-level drawing with shapes, text, and lines',
+        introItem3: 'Interactive UI widgets and menus',
+        introItem4: 'Services for players, workspace, lighting, and more',
+
+        luaVMTitle: 'Lua Virtual Machine',
+        luaVMDesc: 'Lua engine management and script execution.',
+
+        gcTitle: 'Garbage Collector API',
+        gcdDesc: 'Find and modify values stored in the Lua garbage collector by name, such as weapon stats and other values stored in Lua tables.',
+
+        instanceTitle: 'Instance System',
+        instanceDesc: 'Hierarchical object model for organizing game objects. All objects inherit from <code>instance</code>.',
+        instanceBasicProps: 'Basic Properties',
+        instanceParentChild: 'Parent-Child Relationships',
+        instanceAttributes: 'Attributes',
+
+        drawingTitle: 'Drawing API',
+        drawingDesc: 'Low-level drawing primitives for rendering on screen.',
+        drawingProps: 'Object Properties',
+
+        uiTitle: 'UI Widget System',
+        uiDesc: 'Create interactive interface elements.',
+        uiTabMgmt: 'Tab Management',
+        uiWidgetTypes: 'Widget Types',
+        uiWidgetValues: 'Widget Values',
+
+        servicesTitle: 'Services',
+        servicesDesc: 'Global services providing access to core game systems.',
+
+        examplesTitle: 'Code Examples',
+        examplesGC: 'Modify Weapon Stats via GC',
+        examplesUI: 'Create Settings Panel',
+        examplesDrawing: 'Drawing on Screen',
+        examplesInstances: 'Working with Instances',
+
+        refTitle: 'Structures Reference',
+
+        footerText: '&copy; 2024 Fragment Lua API Documentation v1.0',
+
+        langBtn: 'PT',
+    }
+};
+
+let currentLang = localStorage.getItem('lang') || 'pt';
+
+// ============ SIDEBAR NAV ============
+const navStructure = {
+    pt: [
+        { title: 'Getting Started', links: [{ name: 'Introdução', id: 'intro' }] },
+        { title: 'Core Systems', links: [
             { name: 'Lua VM', id: 'lua-vm' },
+            { name: 'Garbage Collector', id: 'gc-api' },
             { name: 'Instance System', id: 'instances' }
-        ]
-    },
-    {
-        title: 'Rendering',
-        links: [
+        ]},
+        { title: 'Rendering', links: [
             { name: 'Drawing API', id: 'drawing' },
             { name: 'UI Widgets', id: 'ui' }
-        ]
-    },
-    {
-        title: 'Reference',
-        links: [
+        ]},
+        { title: 'Reference', links: [
             { name: 'Services', id: 'services' },
             { name: 'Exemplos', id: 'examples' },
             { name: 'Estruturas', id: 'reference' }
-        ]
-    }
-];
+        ]}
+    ],
+    en: [
+        { title: 'Getting Started', links: [{ name: 'Introduction', id: 'intro' }] },
+        { title: 'Core Systems', links: [
+            { name: 'Lua VM', id: 'lua-vm' },
+            { name: 'Garbage Collector', id: 'gc-api' },
+            { name: 'Instance System', id: 'instances' }
+        ]},
+        { title: 'Rendering', links: [
+            { name: 'Drawing API', id: 'drawing' },
+            { name: 'UI Widgets', id: 'ui' }
+        ]},
+        { title: 'Reference', links: [
+            { name: 'Services', id: 'services' },
+            { name: 'Examples', id: 'examples' },
+            { name: 'Structures', id: 'reference' }
+        ]}
+    ]
+};
 
 let currentActive = null;
 
-// Inicialização
+// ============ INIT ============
 document.addEventListener('DOMContentLoaded', function() {
+    initializeLanguage();
     initializeSidebar();
     initializeSearch();
     initializeCodeBlocks();
     initializeScroll();
 });
 
-// ============ RENDERIZAR SIDEBAR ============
+// ============ LANGUAGE ============
+function initializeLanguage() {
+    const btn = document.getElementById('langToggle');
+    if (btn) {
+        btn.textContent = translations[currentLang].langBtn;
+        btn.addEventListener('click', function() {
+            currentLang = currentLang === 'pt' ? 'en' : 'pt';
+            localStorage.setItem('lang', currentLang);
+            applyTranslations();
+            initializeSidebar();
+            btn.textContent = translations[currentLang].langBtn;
+        });
+    }
+    applyTranslations();
+}
+
+function applyTranslations() {
+    const t = translations[currentLang];
+
+    const map = {
+        searchInput: 'searchPlaceholder',
+        introTitle: 'introTitle',
+        introDesc: 'introDesc',
+        introItem1: 'introItem1',
+        introItem2: 'introItem2',
+        introItem3: 'introItem3',
+        introItem4: 'introItem4',
+        luaVMTitle: 'luaVMTitle',
+        luaVMDesc: 'luaVMDesc',
+        gcTitle: 'gcTitle',
+        gcDesc: 'gcdDesc',
+        instanceTitle: 'instanceTitle',
+        instanceDesc: 'instanceDesc',
+        instanceBasicProps: 'instanceBasicProps',
+        instanceParentChild: 'instanceParentChild',
+        instanceAttributes: 'instanceAttributes',
+        drawingTitle: 'drawingTitle',
+        drawingDesc: 'drawingDesc',
+        drawingProps: 'drawingProps',
+        uiTitle: 'uiTitle',
+        uiDesc: 'uiDesc',
+        uiTabMgmt: 'uiTabMgmt',
+        uiWidgetTypes: 'uiWidgetTypes',
+        uiWidgetValues: 'uiWidgetValues',
+        servicesTitle: 'servicesTitle',
+        servicesDesc: 'servicesDesc',
+        examplesTitle: 'examplesTitle',
+        examplesGC: 'examplesGC',
+        examplesUI: 'examplesUI',
+        examplesDrawing: 'examplesDrawing',
+        examplesInstances: 'examplesInstances',
+        refTitle: 'refTitle',
+        footerText: 'footerText',
+    };
+
+    for (const [id, key] of Object.entries(map)) {
+        const el = document.getElementById(id);
+        if (el) {
+            if (el.tagName === 'INPUT') {
+                el.placeholder = t[key];
+            } else {
+                el.innerHTML = t[key];
+            }
+        }
+    }
+}
+
+// ============ SIDEBAR ============
 function initializeSidebar() {
     const sidebarContent = document.getElementById('sidebarContent');
     if (!sidebarContent) return;
 
-    sidebarContent.innerHTML = navStructure.map(section => {
+    const sections = navStructure[currentLang];
+
+    sidebarContent.innerHTML = sections.map(section => {
         const linksHTML = section.links.map(link => `
             <li class="nav-link">
                 <a href="#${link.id}">${link.name}</a>
@@ -62,7 +266,6 @@ function initializeSidebar() {
         `;
     }).join('');
 
-    // Adicionar event listeners aos links
     document.querySelectorAll('.nav-link a').forEach(link => {
         link.addEventListener('click', handleNavClick);
     });
@@ -70,7 +273,7 @@ function initializeSidebar() {
     updateActiveNavItem();
 }
 
-// ============ NAVEGAÇÃO ============
+// ============ NAVIGATION ============
 function handleNavClick(e) {
     e.preventDefault();
     const href = this.getAttribute('href');
@@ -78,24 +281,15 @@ function handleNavClick(e) {
     const element = document.getElementById(id);
 
     if (element) {
-        // Remover active de todos
         document.querySelectorAll('.nav-link a').forEach(a => {
             a.classList.remove('active');
         });
-
-        // Adicionar active no clicado
         this.classList.add('active');
         currentActive = id;
-
-        // Scroll suave
-        element.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-        });
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
 
-// ============ ATUALIZAR NAV ATIVO ============
 function updateActiveNavItem() {
     const sections = document.querySelectorAll('.section');
     let current = '';
@@ -118,23 +312,20 @@ function updateActiveNavItem() {
     }
 }
 
-// ============ BUSCA ============
+// ============ SEARCH ============
 function initializeSearch() {
     const searchInput = document.getElementById('searchInput');
     if (!searchInput) return;
 
     searchInput.addEventListener('input', function(e) {
         const term = e.target.value.toLowerCase();
-
         if (term === '') {
             restoreAllContent();
             return;
         }
-
         searchContent(term);
     });
 
-    // Ctrl+K para focar busca
     document.addEventListener('keydown', function(e) {
         if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
             e.preventDefault();
@@ -147,11 +338,8 @@ function searchContent(term) {
     const sections = document.querySelectorAll('.section');
     sections.forEach(section => {
         const text = section.textContent.toLowerCase();
-        const title = section.querySelector('h2');
-
         if (text.includes(term)) {
             section.style.display = 'block';
-            highlightTerm(section, term);
         } else {
             section.style.display = 'none';
         }
@@ -162,25 +350,6 @@ function restoreAllContent() {
     const sections = document.querySelectorAll('.section');
     sections.forEach(section => {
         section.style.display = 'block';
-        removeHighlights(section);
-    });
-}
-
-function highlightTerm(element, term) {
-    const headers = element.querySelectorAll('h2, h3, h4');
-    const paragraphs = element.querySelectorAll('p, .api-desc, .api-params, .api-return');
-
-    [...headers, ...paragraphs].forEach(el => {
-        if (el.textContent.toLowerCase().includes(term)) {
-            el.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
-        }
-    });
-}
-
-function removeHighlights(element) {
-    const allElements = element.querySelectorAll('*');
-    allElements.forEach(el => {
-        el.style.backgroundColor = '';
     });
 }
 
@@ -201,21 +370,16 @@ function copyToClipboard(text) {
     textarea.style.position = 'fixed';
     textarea.style.opacity = '0';
     document.body.appendChild(textarea);
-
     textarea.select();
     try {
         document.execCommand('copy');
-    } catch (err) {
-        console.error('Falha ao copiar:', err);
-    }
-
+    } catch (err) {}
     document.body.removeChild(textarea);
 }
 
 function showCopyFeedback(element) {
     const originalBgColor = element.style.backgroundColor;
     element.style.backgroundColor = 'rgba(0, 0, 0, 0.15)';
-
     setTimeout(() => {
         element.style.backgroundColor = originalBgColor;
     }, 200);
@@ -226,66 +390,4 @@ function initializeScroll() {
     window.addEventListener('scroll', function() {
         updateActiveNavItem();
     });
-}
-
-// ============ MOBILE MENU ============
-window.addEventListener('resize', function() {
-    const sidebar = document.querySelector('.sidebar');
-    if (window.innerWidth <= 768) {
-        // Configurações mobile
-    } else {
-        // Configurações desktop
-    }
-});
-
-// ============ DARK MODE (opcional) ============
-function toggleDarkMode() {
-    document.body.classList.toggle('dark-mode');
-    localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
-}
-
-// Restaurar tema salvo
-window.addEventListener('load', function() {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-        document.body.classList.add('dark-mode');
-    }
-});
-
-// ============ PERFORMANCE ============
-// Lazy load images se houver
-const images = document.querySelectorAll('img[data-src]');
-const imageObserver = new IntersectionObserver((entries, observer) => {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            const img = entry.target;
-            img.src = img.dataset.src;
-            img.removeAttribute('data-src');
-            observer.unobserve(img);
-        }
-    });
-});
-
-images.forEach(img => imageObserver.observe(img));
-
-// ============ ANALYTICS ============
-function trackPageView() {
-    if (typeof gtag !== 'undefined') {
-        gtag('config', 'GA_ID', {
-            'page_path': window.location.pathname
-        });
-    }
-}
-
-// ============ HELPERS ============
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
 }

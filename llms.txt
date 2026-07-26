@@ -62,6 +62,89 @@ Renders the Lua console window in ImGui.
 
 ---
 
+## GARBAGE COLLECTOR API - Find and Modify GC Values
+
+Functions to find and modify values held in the game's Lua garbage collector by name, such as weapon stats and other values stored in Lua tables.
+
+### getgc
+
+function getgc(): { table }
+function getgc(name: string): { table }
+function getgc(names: { string }): { table }
+
+Scans _G (the global table), the Lua registry, and all metatables recursively.
+When called with no arguments, returns every string-keyed entry found.
+When called with names, returns only entries whose key matches one of the given names.
+The result is an array of entries; each entry is a table:
+  - key — the name the value was found under
+  - value — the current value (number or string, if applicable)
+  - type — the value's type (number, string, boolean, table, function, userdata, ...)
+  - addr — the value's memory address
+
+The same name can be stored in many places, so multiple entries are normal. Returns an empty table if nothing is found.
+
+Lua examples:
+  -- All globals + registry
+  local all = getgc()
+  for _, entry in ipairs(all) do
+      print(entry.key, entry.type)
+  end
+
+  -- Single name
+  local results = getgc("FireRate")
+  for _, entry in ipairs(results) do
+      print(entry.key, entry.value, entry.type)
+  end
+
+  -- Multiple names
+  local results = getgc({ "FireRate", "SpreadAngle", "MagAmmo" })
+  for _, entry in ipairs(results) do
+      print(entry.key, "=", entry.value)
+  end
+
+### setgc
+
+function setgc(key: string, value: Any): int
+function setgc(values: { [string]: Any }): int
+
+Sets every garbage-collected value stored under key to value, scanning the collector on each call.
+Pass a table to set multiple keys at once. Only values whose type matches value are changed.
+Returns the number of values set.
+
+Lua examples:
+  -- Singular
+  setgc("FireRate", 0)
+
+  -- Group
+  setgc({
+      FireRate = 0,
+      SpreadAngle = 0,
+      CameraRecoilMult = 0,
+      MagAmmo = 999999
+  })
+
+### applygc
+
+function applygc(cache: table, key: string, value: Any): int
+function applygc(cache: table, values: { [string]: Any }): int
+
+Same as setgc, but applies to a cache returned by getgc instead of scanning again.
+Call getgc once and reuse the cache with applygc when setting values repeatedly, such as inside a loop or for values the game keeps resetting.
+Run getgc again to refresh the cache if the values are rebuilt, for example after respawning or switching weapons.
+Returns the number of values set.
+
+Lua examples:
+  local cache = getgc({ "FireRate", "SpreadAngle", "MagAmmo" })
+
+  -- Singular
+  applygc(cache, "FireRate", 0)
+  applygc(cache, "MagAmmo", 999999)
+
+  -- Group
+  applygc(cache, { FireRate = 0, SpreadAngle = 0, MagAmmo = 999999 })
+
+---
+
 ## INSTANCE SYSTEM - Game Objects
 
 Namespace: sandbox
@@ -366,6 +449,22 @@ if (lua_vm::initialize()) {
 	lua_vm::shutdown();
 }
 
+### Modify Weapon Stats via GC
+-- Find and cache weapon values
+local cache = getgc({ "FireRate", "SpreadAngle", "MagAmmo" })
+
+-- Apply modifications
+applygc(cache, "FireRate", 0)
+applygc(cache, {
+    FireRate = 0,
+    SpreadAngle = 0,
+    CameraRecoilMult = 0,
+    MagAmmo = 999999
+})
+
+-- Without cache (single call)
+setgc("FireRate", 0)
+
 ### Create UI Tab with Widgets
 local tab = UI:CreateTab("Settings")
 UI:AddCheckboxWidget(tab, "enabled", "Enable", true)
@@ -408,6 +507,15 @@ end
 - lua_vm::execute_string(script, chunk_name) → bool
 - lua_vm::execute_file(path) → bool
 - lua_vm::on_frame(delta_time) → void
+
+### Garbage Collector
+- getgc() → table[] (all entries)
+- getgc(name) → table[]
+- getgc({name1, name2}) → table[]
+- setgc(key, value) → int
+- setgc({key1 = val1, key2 = val2}) → int
+- applygc(cache, key, value) → int
+- applygc(cache, {key1 = val1, key2 = val2}) → int
 
 ### Instance Navigation
 - get_parent() → instance*
