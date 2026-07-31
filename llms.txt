@@ -1,5 +1,5 @@
 # Fragment Lua API - Complete Reference
-# Version 1.0
+# Version 1.1
 # Generated Documentation
 
 This is the complete reference for the Fragment Lua scripting API.
@@ -10,7 +10,11 @@ Fragment provides a powerful Lua scripting engine with:
 - Game object manipulation (Instance system)
 - Low-level drawing (shapes, text, lines)
 - Interactive UI widgets
-- Global services (Players, Workspace, Lighting, RunService)
+- Global services (Players, Workspace, Lighting, RunService, UserInputService, HttpService, TweenService)
+- Task scheduling (task library) and input reading (input library)
+- Vector/transform types (Vector3, Vector2, Color3, CFrame)
+- Bitwise operations (bit32 library)
+- Signal/connection system (Connect/Disconnect/Fire, RenderStepped, Heartbeat, GetPropertyChangedSignal)
 
 All Lua code runs in a sandboxed environment with external emulation of Roblox-like APIs.
 
@@ -125,7 +129,7 @@ Returns: Child instance or nullptr if timeout expires.
 ### Attributes
 
 void set_attribute(const std::string& key, const attribute_value& value)
-Sets an attribute. Supported types: bool, double, string, null.
+Sets an attribute. Supported types: bool, double, string, null, Vector3, Color3, CFrame.
 
 std::optional<attribute_value> get_attribute(const std::string& key) const
 Gets an attribute value.
@@ -134,6 +138,17 @@ Returns: Optional containing value if exists, empty optional otherwise.
 std::unordered_map<std::string, attribute_value> get_attributes() const
 Gets all attributes.
 Returns: Map of key-value pairs.
+
+### Properties & Events
+
+instance.prop = value / instance.prop
+Instances can store and read typed properties by direct indexing. Types: boolean, number, string, Vector2, Vector3, Color3, CFrame.
+
+GetPropertyChangedSignal(prop)
+Returns a signal that fires when the property is changed via Lua.
+Example:
+local sinal = part:GetPropertyChangedSignal("Position")
+sinal:Connect(function() print("changed") end)
 
 ---
 
@@ -207,6 +222,28 @@ enum class object_type
 	text,
 	line
 };
+
+### Lua Drawing (what scripts actually use)
+
+Drawing objects are created with Drawing.new("square"|"text"|"line") and rendered AUTOMATICALLY every frame — there is no render call in Lua. Use cleardrawcache() to clear everything.
+
+Lua property names are capitalized: Visible, Position, Size, Color, Filled, Thickness, Text, TextSize, Center, Transparency, ZIndex, From, To.
+All vector/color tables here are POSITIONAL:
+- Position/Size/From/To = {x, y}  (index 1 = x, index 2 = y)
+- Color = {r, g, b, a}            (indexes 1..4)
+
+Example:
+local box = Drawing.new("square")
+box.Position = {200, 200}        -- {x, y}
+box.Size = {100, 60}
+box.Color = {1, 0, 0, 1}         -- {r, g, b, a}
+box.Thickness = 2
+box.Filled = true
+task.delay(3, function()
+    box:Remove()
+end)
+
+Global cleardrawcache() removes all drawing objects from the screen.
 
 ---
 
@@ -341,59 +378,230 @@ Frame-based event handling and timing.
 std::shared_ptr<instance> create_lighting_service()
 Lighting and visual effects control.
 
+### UserInputService
+std::shared_ptr<instance> create_user_input_service()
+Keyboard/mouse/touch state and mouse location.
+Lua access: game:GetService("UserInputService")
+Methods: IsKeyDown(keycode), GetMouseLocation(), properties MouseEnabled, KeyboardEnabled, TouchEnabled.
+
+### HttpService
+std::shared_ptr<instance> create_http_service()
+HTTP requests and GUID generation.
+Lua access: game:GetService("HttpService")
+Methods: GetAsync(url), PostAsync(url, body, content_type, ...), Request(request_table), GenerateGUID(use_brackets).
+Global aliases: request(request_table), http_request(request_table), HttpGet(url).
+
+### TweenService
+std::shared_ptr<instance> create_tween_service()
+Create and control property animations.
+Lua access: game:GetService("TweenService")
+Method: Create(instance, tween_info_table, goal_properties) -> tween
+The tween_info_table accepts: Time (seconds), EasingStyle, EasingDirection, RepeatCount, Reverses.
+Tween object methods/properties: Play(), Pause(), Cancel(), Duration (seconds), PlaybackState ("Playing"/"Completed"), Instance. There is no Resume(); to continue use Play().
+
 All services inherit from the instance base class.
 
 ---
 
 ## ATTRIBUTE DATA TYPE
 
-using attribute_value = std::variant<std::monostate, bool, double, std::string>;
+using attribute_value = std::variant<std::monostate, bool, double, std::string, vector3_value, color3_value, cframe_value>;
 
 Supported attribute types:
 - std::monostate: Null or empty value
 - bool: Boolean true/false
 - double: Numeric floating-point value
 - std::string: Text string
+- vector3_value: {x, y, z}
+- color3_value: {r, g, b}
+- cframe_value: {x, y, z, R00, R01, R02, R10, R11, R12, R20, R21, R22}
+
+---
+
+## GLOBAL FUNCTIONS
+
+Global-level functions added to the Lua environment:
+
+- print(...), warn(...): console output
+- loadstring(script): compile string as function
+- identifyexecutor(): executor name
+- getgenv(): table of the global environment
+- getmousepos(): current mouse position as a POSITIONAL table {x, y}; access x as pos[1], y as pos[2] (do NOT use pos.x/pos.y)
+- isrbxactive(): whether the target window is active
+- iskeypressed(keycode): whether a key is down
+- cleardrawcache(): clear drawing cache
+- spawn(fn) / spawn(fn, ...args): run function in a new thread
+- wait(seconds): yield for a duration
+- getrawkeys(t): get all keys of a table without __pairs metamethod
+- rawget(t, key), rawset(t, key, value): raw table access
+- request(info) / http_request(info): HTTP request (see HttpService.Request)
+- HttpGet(url): synchronous GET returning body
+
+---
+
+## TASK & INPUT LIBRARIES
+
+### task
+- task.delay(seconds, fn, ...): call fn after delay
+- task.wait(seconds): yield and resume after duration
+- task.spawn(fn, ...): run function in a new thread
+- task.defer(fn, ...): run function in a deferred thread
+
+### input
+- input.mouse_position(): current mouse position as a POSITIONAL table {x, y} (access x as pos[1], y as pos[2])
+- input.is_key_down(keycode): whether a key is held down
+
+---
+
+## DATA TYPES
+
+### Vector3
+- Vector3.new(x, y, z): create a vector
+- Properties: x, y, z
+- Attribute form: {x = ..., y = ..., z = ...}
+
+### Vector2
+- Vector2.new(x, y): create a vector
+- Properties: x, y
+- Attribute form: {x = ..., y = ...}
+
+### Color3
+- Color3.new(r, g, b): create a color (0.0 - 1.0)
+- Properties: r, g, b
+- Attribute form: {r = ..., g = ..., b = ...}
+
+### UDim / UDim2
+- UDim.new(scale, offset): create a UDim (fields: scale, offset)
+- UDim2.new(x_scale, x_offset, y_scale, y_offset): create a UDim2
+- UDim2 fields: x_scale, x_offset, y_scale, y_offset (there are no X/Y sub-objects)
+
+### CFrame
+- CFrame.new(x, y, z): translation-only
+- CFrame.new(x, y, z, R00, R01, R02, R10, R11, R12, R20, R21, R22): full matrix
+- CFrame.lookAt(from, to): look-at transform
+- Properties: Position/P, RightVector, UpVector, BackVector, LookVector
+- Methods: ToEulerAnglesXYZ() -> (x, y, z), Inverse(), plus (+), times (*)
+
+---
+
+## BIT32 LIBRARY
+
+Bitwise operations on unsigned 32-bit integers:
+- bit32.band(...), bit32.bor(...), bit32.bxor(...): AND/OR/XOR of multiple numbers
+- bit32.bnot(x): NOT
+- bit32.btest(...): returns true if all bits set
+- bit32.lshift(x, disp), bit32.rshift(x, disp): logical shifts
+- bit32.arshift(x, disp): arithmetic shift
+- bit32.lrotate(x, disp), bit32.rrotate(x, disp): rotations
+- bit32.extract(n, field, width): extract bits
+- bit32.replace(n, v, field, width): replace bits
+- bit32.tobit(x): normalize to 32-bit unsigned
+
+---
+
+## SIGNALS & CONNECTIONS
+
+Lua access to events uses a unified connection system:
+- signal.Connect(fn): returns a connection table
+- connection:Disconnect(): stops the callback
+- connection:Fire(...args): manually invoke the callback
+
+Available signals:
+- Players.PlayerAdded (arg: player)
+- player.CharacterAdded (arg: character)
+- RunService.RenderStepped (arg: delta_time)
+- RunService.Heartbeat (arg: accumulated runtime seconds)
+- instance:GetPropertyChangedSignal(property)
 
 ---
 
 ## COMMON PATTERNS
 
-### Initialize and Execute Script
+### Initialize and Execute Script (host C++ code)
 if (lua_vm::initialize()) {
 	lua_vm::execute_string("print('Hello')");
 	lua_vm::on_frame(0.016f);  // ~60 FPS
 	lua_vm::shutdown();
 }
 
-### Create UI Tab with Widgets
-local tab = UI:CreateTab("Settings")
-UI:AddCheckboxWidget(tab, "enabled", "Enable", true)
-UI:AddSliderWidget(tab, "value", "Value", 0, 100, 50)
+### Create UI Tab with Widgets (Lua)
+local tab = ui.create_tab("Settings")
+ui.checkbox(tab, "enabled", "Enable", true)
+ui.slider(tab, "value", "Value", 0, 100, 50)
+ui.button(tab, "go", "Go", function() print("clicked") end)
 
-### Get Widget Value
-local value = {}
-if UI:GetWidgetValue(tab, "enabled", value) then
-	if value.type == "boolean" then
-		print("Enabled: " .. tostring(value.bool_value))
-	end
-end
+### Get Widget Value (Lua)
+local enabled = ui.get(tab, "enabled")  -- boolean (checkbox)
+local value = ui.get(tab, "value")      -- number (slider)
+ui.set(tab, "value", 75)                -- update a widget (bool/number/string only)
+-- Note: colorpicker, keybind and multi_dropdown values are NOT readable via ui.get (returns nil).
 
-### Draw Shapes
-local box = Drawing:CreateObject("square")
-box.position = {x = 100, y = 100}
-box.size = {x = 150, y = 100}
-box.color = {r = 1, g = 0, b = 0, a = 1}
-box.filled = false
-Drawing:RenderAll()
+### Draw Shapes (Lua) - rendering is automatic
+local box = Drawing.new("square")
+box.Position = {100, 100}
+box.Size = {150, 100}
+box.Color = {1, 0, 0, 1}
+box.Filled = false
 
-### Access Instances
-local workspace = game:GetService("Workspace")
+### Follow the mouse (Lua) - positions are positional tables
+local label = Drawing.new("text")
+label.Text = "hi"
+label.Center = true
+game.RunService.RenderStepped:Connect(function()
+	local m = input.mouse_position()
+	label.Position = {m[1], m[2]}   -- NOT m.x / m.y
+end)
+
+### Create an Instance (Lua)
+local part = Instance.new("Part")
+part.Name = "MyPart"
+part.Position = Vector3.new(10, 5, 0)
+part.Parent = workspace
+
+### Access Instances (Lua)
 local player = workspace:FindFirstChild("Player1")
 if player then
 	player:SetAttribute("health", 100)
 	print(player:GetAttribute("health"))
 end
+
+### Animate Properties with TweenService (Lua)
+local ts = game:GetService("TweenService")
+local part = game.Workspace:FindFirstChild("Part")
+if part then
+	local tween = ts:Create(part, {
+		Time = 1.5,
+		EasingStyle = "Quad",
+		EasingDirection = "Out",
+		RepeatCount = 0,
+		Reverses = true
+	}, {
+		Position = Vector3.new(100, 50, 0)
+	})
+	tween:Play()
+	print(tween.PlaybackState)  -- "Playing"
+end
+
+### Events & Connections (Lua)
+game.Players.PlayerAdded:Connect(function(player)
+	print("player joined:", player.Name)
+end)
+
+local conn = game:GetService("RunService").RenderStepped:Connect(function(dt)
+	-- dt = seconds since last frame
+end)
+task.delay(5, function()
+	conn:Disconnect()
+end)
+
+### HTTP Request (Lua)
+local http = game:GetService("HttpService")
+local res = http:Request({
+	Url = "https://example.com/api",
+	Method = "GET",
+	Headers = { ["Accept"] = "application/json" },
+})
+print(res.StatusCode, res.Body, res.StatusMessage)
 
 ---
 
@@ -460,11 +668,54 @@ end
 - game:GetService("Workspace") → workspace_service*
 - game:GetService("RunService") → run_service*
 - game:GetService("Lighting") → lighting_service*
+- game:GetService("UserInputService") → user_input_service*
+- game:GetService("HttpService") → http_service*
+- game:GetService("TweenService") → tween_service*
+
+### Global Functions
+- identifyexecutor() → string
+- getmousepos() → {x, y} (pos[1], pos[2])
+- isrbxactive() → bool
+- iskeypressed(key) → bool
+- cleardrawcache() → void
+- spawn(fn, ...) → void
+- wait(seconds) → void
+- getrawkeys(t) → array
+- rawget(t, key) / rawset(t, key, value)
+- request(info) / http_request(info) → table
+- HttpGet(url) → string
+- getgenv() → table
+
+### task & input
+- task.delay(seconds, fn, ...) → void
+- task.wait(seconds) → void
+- task.spawn(fn, ...) → void
+- task.defer(fn, ...) → void
+- input.mouse_position() → {x, y} (pos[1], pos[2])
+- input.is_key_down(keycode) → bool
+
+### Data Types
+- Vector3.new(x, y, z), Vector2.new(x, y), Color3.new(r, g, b)
+- UDim.new(scale, offset), UDim2.new(x_scale, x_offset, y_scale, y_offset)
+- CFrame.new(...), CFrame.lookAt(from, to)
+
+### Instance Constructors & Drawing
+- Instance.new(className) → inst (set inst.Parent to add to tree)
+- Drawing.new("square"|"text"|"line") → drawing (rendered automatically each frame)
+
+### bit32
+- band, bor, bxor, bnot, btest, lshift, rshift, arshift, lrotate, rrotate, extract, replace, tobit
+
+### Signals
+- signal.Connect(fn) → connection
+- connection:Disconnect() → void
+- connection:Fire(...) → void
+- GetPropertyChangedSignal(prop) → signal
 
 ---
 
 ## END OF FRAGMENT LUA API REFERENCE
 
 For complete examples and detailed explanations, visit the HTML documentation.
-Last updated: 2024
+Last updated: 2026
 Version: 1.0

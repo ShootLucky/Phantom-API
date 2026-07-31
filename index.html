@@ -38,19 +38,84 @@
             <!-- Getting Started -->
             <section id="intro" class="section">
                 <h2 id="introTitle">Introdução</h2>
-                <p id="introDesc">Phantom proporciona um poderoso mecanismo de scripts Lua com uma API completa para:</p>
+                <p id="introDesc">Phantom (código-fonte <code>fragment</code>) proporciona um motor de scripts Lua embutido com uma API no estilo Roblox. Com ela você pode:</p>
                 <ul class="feature-list">
-                    <li id="introItem1">Manipulação de objetos de jogo através do sistema de instâncias</li>
-                    <li id="introItem2">Desenho de baixo nível com formas, texto e linhas</li>
-                    <li id="introItem3">Widgets UI interativos e menus</li>
-                    <li id="introItem4">Serviços para players, workspace, lighting e muito mais</li>
+                    <li id="introItem1">Ler e manipular o mundo do jogo através de instâncias, atributos e propriedades</li>
+                    <li id="introItem2">Desenhar na tela com quadrados, texto e linhas (a renderização é automática a cada frame)</li>
+                    <li id="introItem3">Criar menus e widgets interativos com a biblioteca <code>ui</code></li>
+                    <li id="introItem4">Usar serviços: <code>Players</code>, <code>Workspace</code>, <code>RunService</code>, <code>UserInputService</code>, <code>HttpService</code>, <code>TweenService</code> e <code>Lighting</code></li>
                 </ul>
+                <div class="note">
+                    <strong>Dica:</strong> todos os exemplos desta documentação funcionam copiando e colando no Lua Editor do Phantom e executando.
+                    Cores, vetores e posições de mouse são <strong>tabelas</strong> (não objetos), então use campos nomeados
+                    (<code>{ x = 10, y = 5 }</code>) ou listas posicionais (<code>{10, 5}</code>) conforme indicado em cada seção.
+                </div>
+            </section>
+
+            <!-- Quick Start -->
+            <section id="quickstart" class="section">
+                <h2 id="quickstartTitle">Início Rápido</h2>
+                <p id="quickstartDesc">Quatro testes simples para validar que a API está funcionando. Cada bloco é independente.</p>
+
+                <h3 id="quickstartRun">1. Executar e imprimir</h3>
+                <div class="code-block">
+                    <pre><code>-- A forma mais simples de testar o executor
+local nome, versao = identifyexecutor()
+print("executor:", nome, versao)
+print("soma:", 1 + 2)</code></pre>
+                </div>
+
+                <h3>2. Desenhar uma caixa na tela</h3>
+                <div class="code-block">
+                    <pre><code>-- Cria uma caixa vermelha. NÃO precisa chamar render:
+-- o Phantom desenha automaticamente a cada frame.
+local box = Drawing.new("square")
+box.Position = {200, 200}          -- {x, y}
+box.Size = {100, 60}               -- {largura, altura}
+box.Color = {1, 0, 0, 1}           -- {r, g, b, a} (0-1)
+box.Thickness = 2
+box.Filled = true
+
+-- Some da tela depois de 3 segundos
+task.delay(3, function()
+    box:Remove()
+end)</code></pre>
+                </div>
+
+                <h3>3. Seguir o mouse com um texto</h3>
+                <div class="code-block">
+                    <pre><code>-- Lembre: posição de mouse vem como {x, y} acessível por pos[1] e pos[2]
+local label = Drawing.new("text")
+label.Text = "Seguindo o mouse"
+label.Color = {1, 1, 1, 1}
+
+game.RunService.RenderStepped:Connect(function()
+    local m = input.mouse_position()
+    label.Position = {m[1] + 10, m[2] + 10}
+end)</code></pre>
+                </div>
+
+                <h3>4. Criar um menu com checkbox</h3>
+                <div class="code-block">
+                    <pre><code>local tab = ui.create_tab("teste")
+ui.checkbox(tab, "habilitado", "Ativado", true)
+ui.slider(tab, "alcance", "Alcance", 1, 100, 50)
+
+-- Lê o valor atual dos widgets
+print("ativado:", ui.get(tab, "habilitado"))
+print("alcance:", ui.get(tab, "alcance"))</code></pre>
+                </div>
             </section>
 
             <!-- Lua VM -->
             <section id="lua-vm" class="section">
                 <h2 id="luaVMTitle">Lua Virtual Machine</h2>
                 <p id="luaVMDesc">Gerenciamento do motor Lua e execução de scripts.</p>
+                <div class="note">
+                    <strong>Para desenvolvedores do host (C++):</strong> esta seção descreve a API interna que o Phantom usa para
+                    controlar o motor Lua. Scripts escritos no Lua Editor <strong>não precisam</strong> dela — usam apenas os
+                    exemplos das outras seções.
+                </div>
 
                 <div class="api-group">
                     <div class="api-item">
@@ -103,7 +168,7 @@ lua_vm::execute_string("x = 42", "meu_chunk");</code></pre>
                             <code class="api-sig">void on_frame(float delta_time)</code>
                             <span class="api-badge">VM</span>
                         </div>
-                        <p class="api-desc">Chamado a cada frame. Coloque isto no seu game loop.</p>
+                        <p class="api-desc">Chamado a cada frame. Coloque isto no seu game loop. É o que dispara <code>RenderStepped</code>, os tweens e a renderização automática dos desenhos.</p>
                         <div class="code-block">
                             <pre><code>while (jogo_rodando) {
     float delta = calcular_delta_time();
@@ -118,36 +183,45 @@ lua_vm::execute_string("x = 42", "meu_chunk");</code></pre>
             <!-- Instance System -->
             <section id="instances" class="section">
                 <h2 id="instanceTitle">Sistema de Instâncias</h2>
-                <p id="instanceDesc">Modelo de objeto hierárquico para organizar objetos do jogo. Todos os objetos herdam de <code>instance</code>.</p>
+                <p id="instanceDesc">Modelo de objeto hierárquico no estilo Roblox. A raiz é a global <code>game</code> e existe também a global <code>workspace</code>. Nomes em camelCase e snake_case são equivalentes (<code>FindFirstChild</code> = <code>find_first_child</code>).</p>
 
                 <h3 id="instanceBasicProps">Propriedades Básicas</h3>
                 <div class="api-group">
                     <div class="api-item">
                         <div class="api-header">
-                            <code class="api-sig">std::string get_name() const</code>
+                            <code class="api-sig">inst.Name → string · inst.ClassName → string</code>
                             <span class="api-badge">Instance</span>
                         </div>
-                        <p class="api-desc">Obtém o nome da instância.</p>
+                        <p class="api-desc">Lê o nome e a classe da instância (equivalente a <code>inst:GetName()</code> / <code>inst:GetClassName()</code>).</p>
                         <div class="code-block">
                             <pre><code>local player = workspace:FindFirstChild("Player1")
-print(player:GetName())  -- Output: Player1</code></pre>
+if player then
+    print(player.Name, player.ClassName)
+end</code></pre>
                         </div>
                     </div>
 
                     <div class="api-item">
                         <div class="api-header">
-                            <code class="api-sig">void set_name(const std::string& name)</code>
+                            <code class="api-sig">inst.Parent → inst? · inst.Parent = outro</code>
                             <span class="api-badge">Instance</span>
                         </div>
-                        <p class="api-desc">Define o nome da instância.</p>
+                        <p class="api-desc">Lê ou altera o pai da instância.</p>
                     </div>
 
                     <div class="api-item">
                         <div class="api-header">
-                            <code class="api-sig">std::string get_class_name() const</code>
+                            <code class="api-sig">Instance.new(className) → inst</code>
                             <span class="api-badge">Instance</span>
                         </div>
-                        <p class="api-desc">Obtém o nome da classe.</p>
+                        <p class="api-desc">Cria uma nova instância. Use <code>inst.Parent = ...</code> para colocar na árvore.</p>
+                        <div class="code-block">
+                            <pre><code>local part = Instance.new("Part")
+part.Name = "MinhaParte"
+part.Position = {x = 10, y = 5, z = 0}
+part.Parent = workspace
+print(workspace:FindFirstChild("MinhaParte"))</code></pre>
+                        </div>
                     </div>
                 </div>
 
@@ -155,24 +229,23 @@ print(player:GetName())  -- Output: Player1</code></pre>
                 <div class="api-group">
                     <div class="api-item">
                         <div class="api-header">
-                            <code class="api-sig">std::vector&lt;std::shared_ptr&lt;instance&gt;&gt; get_children() const</code>
+                            <code class="api-sig">inst:GetChildren() → {inst...}</code>
                             <span class="api-badge">Instance</span>
                         </div>
-                        <p class="api-desc">Obtém todos os filhos diretos.</p>
+                        <p class="api-desc">Retorna uma lista com todos os filhos diretos.</p>
                         <div class="code-block">
-                            <pre><code>local children = workspace:GetChildren()
-for _, child in ipairs(children) do
-    print(child:GetName())
+                            <pre><code>for _, child in ipairs(workspace:GetChildren()) do
+    print(child.Name)
 end</code></pre>
                         </div>
                     </div>
 
                     <div class="api-item">
                         <div class="api-header">
-                            <code class="api-sig">std::shared_ptr&lt;instance&gt; find_first_child(const std::string& name) const</code>
+                            <code class="api-sig">inst:FindFirstChild(name) → inst?</code>
                             <span class="api-badge">Instance</span>
                         </div>
-                        <p class="api-desc">Encontra o primeiro filho direto por nome.</p>
+                        <p class="api-desc">Encontra o primeiro filho direto por nome (retorna <code>nil</code> se não existir).</p>
                         <div class="code-block">
                             <pre><code>local player = workspace:FindFirstChild("Player1")</code></pre>
                         </div>
@@ -180,10 +253,26 @@ end</code></pre>
 
                     <div class="api-item">
                         <div class="api-header">
-                            <code class="api-sig">std::shared_ptr&lt;instance&gt; find_first_descendant(const std::string& name) const</code>
+                            <code class="api-sig">inst:FindFirstDescendant(name) · inst:GetDescendants()</code>
                             <span class="api-badge">Instance</span>
                         </div>
-                        <p class="api-desc">Encontra o primeiro descendente em qualquer profundidade.</p>
+                        <p class="api-desc">Procura em qualquer profundidade, ou lista todos os descendentes da árvore.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">inst:WaitForChild(name) → inst</code>
+                            <span class="api-badge">Instance</span>
+                        </div>
+                        <p class="api-desc">Aguarda até o filho existir e o retorna (como em Roblox).</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">inst:IsDescendantOf(other) · inst:IsAncestorOf(other)</code>
+                            <span class="api-badge">Instance</span>
+                        </div>
+                        <p class="api-desc">Verifica a hierarquia entre duas instâncias.</p>
                     </div>
                 </div>
 
@@ -191,27 +280,81 @@ end</code></pre>
                 <div class="api-group">
                     <div class="api-item">
                         <div class="api-header">
-                            <code class="api-sig">void set_attribute(const std::string& key, const attribute_value& value)</code>
+                            <code class="api-sig">inst:SetAttribute(key, value)</code>
                             <span class="api-badge">Instance</span>
                         </div>
-                        <p class="api-desc">Define um atributo. Tipos: bool, double, string, null.</p>
+                        <p class="api-desc">Define um atributo. Tipos aceitos: boolean, number, string, nil, Vector3 (<code>{x, y, z}</code>), Color3 (<code>{r, g, b}</code>) e CFrame (<code>{x, y, z, R00 ... R22}</code>).</p>
                         <div class="code-block">
-                            <pre><code>player:SetAttribute("health", 100.0)
+                            <pre><code>local player = workspace:FindFirstChild("Player1")
+player:SetAttribute("health", 100)
 player:SetAttribute("team", "red")
-player:SetAttribute("active", true)</code></pre>
+player:SetAttribute("alive", true)
+player:SetAttribute("color", {r = 1, g = 0, b = 0})   -- Color3</code></pre>
                         </div>
                     </div>
 
                     <div class="api-item">
                         <div class="api-header">
-                            <code class="api-sig">std::optional&lt;attribute_value&gt; get_attribute(const std::string& key) const</code>
+                            <code class="api-sig">inst:GetAttribute(key) → value?</code>
                             <span class="api-badge">Instance</span>
                         </div>
-                        <p class="api-desc">Obtém um valor de atributo.</p>
+                        <p class="api-desc">Obtém o valor de um atributo.</p>
                         <div class="code-block">
-                            <pre><code>local valor = player:GetAttribute("health")
-if valor then
-    print("Saúde: " .. valor)
+                            <pre><code>local hp = player:GetAttribute("health")
+if hp ~= nil then
+    print("Saúde:", hp)
+end</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">inst:GetAttributes() → table</code>
+                            <span class="api-badge">Instance</span>
+                        </div>
+                        <p class="api-desc">Retorna todas as chaves e valores de atributos.</p>
+                    </div>
+                </div>
+
+                <h3 id="instancePropsEvents">Propriedades e Eventos</h3>
+                <div class="api-group">
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">inst.prop = value / inst.prop</code>
+                            <span class="api-badge">Instance</span>
+                        </div>
+                        <p class="api-desc">Instâncias armazenam propriedades tipadas por indexação direta. Tipos: boolean, number, string, Vector2, Vector3, Color3 e CFrame.</p>
+                        <div class="code-block">
+                            <pre><code>local part = game.Workspace:FindFirstChild("Part")
+if part then
+    -- Definir (aceita tabela nomeada ou Vector3.new)
+    part.Position = Vector3.new(10, 5, 0)
+    part.Visible = false
+
+    -- Ler devolve uma Tabela normal (sem operadores de aritmética)
+    local p = part.Position
+    print(p.x, p.y, p.z)
+    -- para mover, crie uma nova tabela:
+    part.Position = { x = p.x + 1, y = p.y, z = p.z }
+end</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">inst:GetPropertyChangedSignal(prop) → signal</code>
+                            <span class="api-badge">Instance</span>
+                        </div>
+                        <p class="api-desc">Retorna um sinal que dispara quando a propriedade é alterada via Lua.</p>
+                        <div class="code-block">
+                            <pre><code>local part = game.Workspace:FindFirstChild("Part")
+if part then
+    part:GetPropertyChangedSignal("Position"):Connect(function()
+        print("Posição mudou!")
+    end)
+    task.delay(1, function()
+        part.Position = {x = 99, y = 0, z = 0}
+    end)
 end</code></pre>
                         </div>
                     </div>
@@ -221,86 +364,107 @@ end</code></pre>
             <!-- Drawing API -->
             <section id="drawing" class="section">
                 <h2 id="drawingTitle">Drawing API</h2>
-                <p id="drawingDesc">Primitivos de desenho de baixo nível para renderizar na tela.</p>
+                <p id="drawingDesc">Desenho de baixo nível na tela. Crie objetos com <code>Drawing.new</code> e eles são <strong>renderizados automaticamente a cada frame</strong> — não existe chamada de render. Para apagar tudo de uma vez use a global <code>cleardrawcache()</code>.</p>
+
+                <div class="note">
+                    <strong>Importante:</strong> aqui as tabelas são <strong>posicionais</strong> (índices 1, 2, ...):
+                    <code>Position</code>/<code>Size</code> usam <code>{x, y}</code> e <code>Color</code> usa <code>{r, g, b, a}</code>.
+                    Ex.: <code>box.Position = {200, 200}</code> e <code>box.Color = {1, 0, 0, 1}</code>.
+                </div>
 
                 <div class="api-group">
                     <div class="api-item">
                         <div class="api-header">
-                            <code class="api-sig">std::shared_ptr&lt;drawing_object&gt; create_object(const std::string& type_name)</code>
+                            <code class="api-sig">Drawing.new("square" | "text" | "line") → drawing</code>
                             <span class="api-badge">Drawing</span>
                         </div>
-                        <p class="api-desc">Cria um objeto desenhável.</p>
-                        <p class="api-params"><strong>Tipos:</strong> "square", "text", "line"</p>
+                        <p class="api-desc">Cria um objeto desenhável. Tipos: <code>"square"</code> (quadrado/retângulo), <code>"text"</code> (texto) e <code>"line"</code> (linha).</p>
                         <div class="code-block">
-                            <pre><code>-- Criar um quadrado
-local box = drawing.create_object("square")
-box.position.x = 100
-box.position.y = 100
-box.size.x = 50
-box.size.y = 50
-box.color = {r=1, g=0, b=0, a=1}
-box.filled = true</code></pre>
+                            <pre><code>local box = Drawing.new("square")
+box.Position = {100, 100}        -- {x, y}
+box.Size = {150, 100}            -- {largura, altura}
+box.Color = {1, 0, 0, 1}         -- {r, g, b, a}
+box.Thickness = 2
+box.Filled = false</code></pre>
                         </div>
                     </div>
 
                     <div class="api-item">
                         <div class="api-header">
-                            <code class="api-sig">std::shared_ptr&lt;drawing_object&gt; find_object(int object_id)</code>
+                            <code class="api-sig">drawing:Remove()</code>
                             <span class="api-badge">Drawing</span>
                         </div>
-                        <p class="api-desc">Encontra um objeto desenhável por ID.</p>
+                        <p class="api-desc">Remove o objeto da tela. Depois de remover, o objeto fica inutilizável.</p>
+                        <div class="code-block">
+                            <pre><code>local line = Drawing.new("line")
+line.From = {10, 10}
+line.To = {200, 200}
+line.Thickness = 3
+line.Color = {0, 1, 1, 1}
+task.delay(2, function()
+    line:Remove()
+end)</code></pre>
+                        </div>
                     </div>
 
                     <div class="api-item">
                         <div class="api-header">
-                            <code class="api-sig">bool remove_object(int object_id)</code>
-                            <span class="api-badge">Drawing</span>
+                            <code class="api-sig">cleardrawcache()</code>
+                            <span class="api-badge">Global</span>
                         </div>
-                        <p class="api-desc">Remove um objeto desenhável.</p>
-                    </div>
-
-                    <div class="api-item">
-                        <div class="api-header">
-                            <code class="api-sig">void render_all()</code>
-                            <span class="api-badge">Drawing</span>
-                        </div>
-                        <p class="api-desc">Renderiza todos os objetos visíveis.</p>
-                    </div>
-
-                    <div class="api-item">
-                        <div class="api-header">
-                            <code class="api-sig">void clear_all()</code>
-                            <span class="api-badge">Drawing</span>
-                        </div>
-                        <p class="api-desc">Remove todos os objetos desenhados.</p>
+                        <p class="api-desc">Remove todos os objetos de desenho da tela de uma vez.</p>
                     </div>
                 </div>
 
-                <h3 id="drawingProps">Propriedades de Objects</h3>
+                <h3 id="drawingProps">Propriedades (em ordem de prioridade de escrita/leitura)</h3>
                 <div class="properties-grid">
                     <div class="prop">
-                        <code>position</code>
-                        <p>Coordenadas X, Y</p>
+                        <code>Visible</code>
+                        <p>Mostrar/ocultar (padrão: true)</p>
                     </div>
                     <div class="prop">
-                        <code>size</code>
-                        <p>Largura e altura</p>
+                        <code>Position</code>
+                        <p>Posição <code>{x, y}</code> (text e square)</p>
                     </div>
                     <div class="prop">
-                        <code>color</code>
-                        <p>Cor RGBA (0-1)</p>
+                        <code>Size</code>
+                        <p>Largura e altura <code>{w, h}</code> (square)</p>
                     </div>
                     <div class="prop">
-                        <code>thickness</code>
-                        <p>Espessura de linha</p>
+                        <code>Color</code>
+                        <p>Cor <code>{r, g, b, a}</code> 0-1 (todos)</p>
                     </div>
                     <div class="prop">
-                        <code>filled</code>
-                        <p>Preencher forma</p>
+                        <code>Thickness</code>
+                        <p>Espessura da borda (square) / linha</p>
                     </div>
                     <div class="prop">
-                        <code>z_index</code>
-                        <p>Ordem de desenho</p>
+                        <code>Filled</code>
+                        <p>Preencher a forma (square)</p>
+                    </div>
+                    <div class="prop">
+                        <code>Text</code>
+                        <p>Conteúdo do texto (text)</p>
+                    </div>
+                    <div class="prop">
+                        <code>TextSize</code>
+                        <p>Tamanho da fonte (text)</p>
+                    </div>
+                    <div class="prop">
+                        <code>Center</code>
+                        <p>Centralizar texto no Position</p>
+                    </div>
+                    <div class="prop">
+                        <code>Transparency</code>
+                        <p>Transparência 0-1</p>
+                    </div>
+                    <div class="prop">
+                        <code>From / To</code>
+                        <p>Pontas da linha <code>{x, y}</code> (line)</p>
+                    </div>
+                    <div class="prop">
+                        <code>ZIndex</code>
+                        <p>Ordem de desenho (maior fica na frente)</p>
                     </div>
                 </div>
             </section>
@@ -308,89 +472,105 @@ box.filled = true</code></pre>
             <!-- UI Widgets -->
             <section id="ui" class="section">
                 <h2 id="uiTitle">UI Widget System</h2>
-                <p id="uiDesc">Crie elementos de interface interativos.</p>
+                <p id="uiDesc">Crie abas e widgets interativos. Tudo é gerenciado pela tabela <code>ui</code> no Lua — nenhuma aba é criada por padrão; <code>ui.create_tab</code> cria a primeira.</p>
 
                 <h3 id="uiTabMgmt">Gerenciamento de Abas</h3>
                 <div class="api-group">
                     <div class="api-item">
                         <div class="api-header">
-                            <code class="api-sig">int create_tab(const std::string& name)</code>
+                            <code class="api-sig">ui.create_tab(name) → tab_id</code>
                             <span class="api-badge">UI</span>
                         </div>
-                        <p class="api-desc">Cria uma nova aba de UI.</p>
+                        <p class="api-desc">Cria uma nova aba e retorna o id usado nos outros comandos.</p>
                         <div class="code-block">
-                            <pre><code>local tab_id = ui.create_tab("Configurações")
-print("Aba criada: " .. tab_id)</code></pre>
+                            <pre><code>local tab = ui.create_tab("Minha Aba")
+print("id da aba:", tab)</code></pre>
                         </div>
                     </div>
 
                     <div class="api-item">
                         <div class="api-header">
-                            <code class="api-sig">bool remove_tab(int tab_id)</code>
+                            <code class="api-sig">ui.set_tab_name(tab_id, name) · ui.remove_tab(tab_id) · ui.clear_tab(tab_id)</code>
                             <span class="api-badge">UI</span>
                         </div>
-                        <p class="api-desc">Remove uma aba e todos seus widgets.</p>
-                    </div>
-
-                    <div class="api-item">
-                        <div class="api-header">
-                            <code class="api-sig">std::vector&lt;tab_descriptor&gt; get_tabs_snapshot()</code>
-                            <span class="api-badge">UI</span>
-                        </div>
-                        <p class="api-desc">Obtém todas as abas atuais.</p>
+                        <p class="api-desc">Renomeia, remove (com todos os widgets) ou limpa uma aba.</p>
                     </div>
                 </div>
 
                 <h3 id="uiWidgetTypes">Tipos de Widgets</h3>
+                <p class="section-hint">Todos seguem o padrão <code>ui.tipo(tab_id, chave, rótulo, ...)</code>. A <code>chave</code> identifica o widget para ler/escrever valores depois.</p>
                 <div class="widgets-grid">
                     <div class="widget-card">
                         <h4>Checkbox</h4>
-                        <p>Toggle booleano</p>
-                        <code>add_checkbox_widget(tab, key, label, default)</code>
+                        <p>Liga/desliga (bool)</p>
+                        <code>ui.checkbox(tab, "key", "label", default)</code>
                     </div>
                     <div class="widget-card">
                         <h4>Slider</h4>
-                        <p>Deslizador numérico</p>
-                        <code>add_slider_widget(tab, key, label, min, max, default)</code>
+                        <p>Valor numérico com mínimo e máximo</p>
+                        <code>ui.slider(tab, "key", "label", min, max, default)</code>
                     </div>
                     <div class="widget-card">
                         <h4>Dropdown</h4>
-                        <p>Seleção única</p>
-                        <code>add_dropdown_widget(tab, key, label, options, index)</code>
+                        <p>Seleção única a partir de uma lista</p>
+                        <code>ui.dropdown(tab, "key", "label", { "A", "B" }, índice)</code>
+                    </div>
+                    <div class="widget-card">
+                        <h4>MultiDropdown</h4>
+                        <p>Seleção múltipla</p>
+                        <code>ui.multi_dropdown(tab, "key", "label", { "A", "B" })</code>
                     </div>
                     <div class="widget-card">
                         <h4>Button</h4>
-                        <p>Botão clicável</p>
-                        <code>add_button_widget(tab, key, label, callback)</code>
+                        <p>Botão que chama uma função</p>
+                        <code>ui.button(tab, "key", "label", function() ... end)</code>
+                    </div>
+                    <div class="widget-card">
+                        <h4>Keybind</h4>
+                        <p>Atalho de tecla</p>
+                        <code>ui.keybind(tab, "key", "label", tecla, modo)</code>
                     </div>
                     <div class="widget-card">
                         <h4>ColorPicker</h4>
                         <p>Seleção de cor</p>
-                        <code>add_colorpicker_widget(tab, key, label, color)</code>
+                        <code>ui.colorpicker(tab, "key", "label", {r, g, b, a})</code>
                     </div>
                     <div class="widget-card">
                         <h4>InputText</h4>
                         <p>Campo de texto</p>
-                        <code>add_input_text_widget(tab, key, label, default)</code>
+                        <code>ui.input_text(tab, "key", "label", default)</code>
                     </div>
                 </div>
 
-                <h3 id="uiWidgetValues">Valores de Widget</h3>
+                <h3 id="uiWidgetValues">Ler e Definir Valores</h3>
                 <div class="api-group">
                     <div class="api-item">
                         <div class="api-header">
-                            <code class="api-sig">bool get_widget_value(int tab_id, const std::string& key, widget_value& out_value)</code>
+                            <code class="api-sig">ui.get(tab_id, key) → bool | number | string</code>
                             <span class="api-badge">UI</span>
                         </div>
-                        <p class="api-desc">Obtém o valor atual de um widget.</p>
+                        <p class="api-desc">Retorna o valor atual do widget: boolean (checkbox), número (slider), inteiro (índice do dropdown) ou string (input_text). Para colorpicker, keybind e multi_dropdown retorna <code>nil</code> — esses valores não são legíveis via Lua.</p>
                     </div>
 
                     <div class="api-item">
                         <div class="api-header">
-                            <code class="api-sig">bool set_widget_value(int tab_id, const std::string& key, const widget_value& in_value)</code>
+                            <code class="api-sig">ui.set(tab_id, key, valor)</code>
                             <span class="api-badge">UI</span>
                         </div>
-                        <p class="api-desc">Define o valor de um widget.</p>
+                        <p class="api-desc">Define o valor de um widget existente. Aceita apenas boolean, number ou string.</p>
+                        <div class="code-block">
+                            <pre><code>local tab = ui.create_tab("exemplo")
+ui.checkbox(tab, "speedhack", "Speedhack", false)
+ui.button(tab, "ativar", "Ativar tudo", function()
+    ui.set(tab, "speedhack", true)
+end)
+
+game.RunService.RenderStepped:Connect(function()
+    if ui.get(tab, "speedhack") then
+        -- aplica o efeito...
+    end
+end)</code></pre>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -398,102 +578,882 @@ print("Aba criada: " .. tab_id)</code></pre>
             <!-- Services -->
             <section id="services" class="section">
                 <h2 id="servicesTitle">Services</h2>
-                <p id="servicesDesc">Serviços globais fornecendo acesso aos principais sistemas do jogo.</p>
+                <p id="servicesDesc">Serviços globais acessíveis pela árvore do <code>game</code>. Qualquer serviço pode ser obtido com <code>game:GetService("Nome")</code> ou pela propriedade direta (<code>game.Players</code>).</p>
 
                 <div class="services-grid">
                     <div class="service-card">
-                        <h4>Players Service</h4>
-                        <p>Acesso ao gerenciamento de players e informações.</p>
-                        <code>game:GetService("Players")</code>
+                        <h4>Players</h4>
+                        <p>Jogadores conectados e o jogador local</p>
+                        <code>game.Players</code>
                     </div>
                     <div class="service-card">
-                        <h4>Workspace Service</h4>
-                        <p>Acesso ao mundo do jogo e ambiente.</p>
-                        <code>game:GetService("Workspace")</code>
+                        <h4>Workspace</h4>
+                        <p>Mundo do jogo (árvore principal)</p>
+                        <code>workspace</code>
                     </div>
                     <div class="service-card">
                         <h4>RunService</h4>
-                        <p>Eventos baseados em frames e timing.</p>
+                        <p>Eventos por frame e de heartbeat</p>
                         <code>game:GetService("RunService")</code>
                     </div>
                     <div class="service-card">
-                        <h4>Lighting Service</h4>
-                        <p>Controle de iluminação e efeitos visuais.</p>
+                        <h4>UserInputService</h4>
+                        <p>Teclado e posição do mouse</p>
+                        <code>game:GetService("UserInputService")</code>
+                    </div>
+                    <div class="service-card">
+                        <h4>HttpService</h4>
+                        <p>Requisições HTTP e GUIDs</p>
+                        <code>game:GetService("HttpService")</code>
+                    </div>
+                    <div class="service-card">
+                        <h4>TweenService</h4>
+                        <p>Animação de propriedades</p>
+                        <code>game:GetService("TweenService")</code>
+                    </div>
+                    <div class="service-card">
+                        <h4>Lighting</h4>
+                        <p>Configurações de iluminação</p>
                         <code>game:GetService("Lighting")</code>
+                    </div>
+                </div>
+
+                <h3 id="servicesPlayers">Players</h3>
+                <div class="api-group">
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">game.Players.LocalPlayer → player</code>
+                            <span class="api-badge">Players</span>
+                        </div>
+                        <p class="api-desc">O jogador local do executor.</p>
+                        <div class="code-block">
+                            <pre><code>local me = game.Players.LocalPlayer
+if me then
+    print("você é:", me.Name)
+    print("character:", me.Character) -- ou me:FindFirstChild("Character")
+end</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">game.Players:GetPlayers() → {player...}</code>
+                            <span class="api-badge">Players</span>
+                        </div>
+                        <p class="api-desc">Lista todos os jogadores.</p>
+                        <div class="code-block">
+                            <pre><code>for _, p in ipairs(game.Players:GetPlayers()) do
+    print(p.Name)
+end</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">game.Players.PlayerAdded:Connect(fn) · player.CharacterAdded:Connect(fn)</code>
+                            <span class="api-badge">Players</span>
+                        </div>
+                        <p class="api-desc">Eventos de entrada de jogador e criação de character. O callback recebe a instância correspondente.</p>
+                        <div class="code-block">
+                            <pre><code>game.Players.PlayerAdded:Connect(function(player)
+    print("entrou:", player.Name)
+end)</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 id="servicesRunService">RunService</h3>
+                <div class="api-group">
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">game:GetService("RunService").RenderStepped:Connect(fn)</code>
+                            <span class="api-badge">RunService</span>
+                        </div>
+                        <p class="api-desc">Chamado a cada frame. O callback recebe o <code>delta_time</code> em segundos.</p>
+                        <div class="code-block">
+                            <pre><code>local rs = game:GetService("RunService")
+rs.RenderStepped:Connect(function(dt)
+    -- dt = tempo entre frames (ex.: 0.016)
+end)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">...Heartbeat:Connect(fn)</code>
+                            <span class="api-badge">RunService</span>
+                        </div>
+                        <p class="api-desc">Chamado a cada frame com o tempo de execução acumulado em segundos.</p>
+                    </div>
+                </div>
+
+                <h3 id="servicesUIS">UserInputService</h3>
+                <div class="api-group">
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">uis:IsKeyDown(virtual_key) → boolean</code>
+                            <span class="api-badge">UserInputService</span>
+                        </div>
+                        <p class="api-desc">Verifica se a tecla está pressionada (use códigos de tecla virtuais do Windows, ex.: 0x57 = W).</p>
+                        <div class="code-block">
+                            <pre><code>local uis = game:GetService("UserInputService")
+game.RunService.RenderStepped:Connect(function()
+    if uis:IsKeyDown(0x57) then  -- W
+        print("W pressionado")
+    end
+end)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">uis:GetMouseLocation() → {x, y}</code>
+                            <span class="api-badge">UserInputService</span>
+                        </div>
+                        <p class="api-desc">Posição do mouse. Retorna tabela posicional: <code>pos[1]</code> = x, <code>pos[2]</code> = y.</p>
+                        <div class="code-block">
+                            <pre><code>local pos = uis:GetMouseLocation()
+print("x:", pos[1], "y:", pos[2])</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">uis.MouseEnabled · uis.KeyboardEnabled · uis.TouchEnabled</code>
+                            <span class="api-badge">UserInputService</span>
+                        </div>
+                        <p class="api-desc">Informam quais dispositivos de entrada estão disponíveis.</p>
+                    </div>
+                </div>
+
+                <h3 id="servicesHttp">HttpService</h3>
+                <div class="api-group">
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">http:GetAsync(url) → string</code>
+                            <span class="api-badge">HttpService</span>
+                        </div>
+                        <p class="api-desc">Requisição GET; retorna o corpo da resposta como texto.</p>
+                        <div class="code-block">
+                            <pre><code>local http = game:GetService("HttpService")
+local corpo = http:GetAsync("https://api.example.com/dados")
+print(corpo)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">http:PostAsync(url, corpo, contentType, ...)</code>
+                            <span class="api-badge">HttpService</span>
+                        </div>
+                        <p class="api-desc">Requisição POST com corpo e tipo de conteúdo.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">http:Request(opts) → {StatusCode, Body, StatusMessage, Headers}</code>
+                            <span class="api-badge">HttpService</span>
+                        </div>
+                        <p class="api-desc">Requisição completa. A tabela <code>opts</code> aceita <code>Url</code>, <code>Method</code>, <code>Headers</code> e <code>Body</code>.</p>
+                        <div class="code-block">
+                            <pre><code>local res = http:Request({
+    Url = "https://api.example.com/dados",
+    Method = "GET",
+    Headers = { ["Content-Type"] = "application/json" },
+})
+print(res.StatusCode, res.StatusMessage)
+print(res.Body)
+for k, v in pairs(res.Headers) do
+    print(k, "=", v)
+end</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">http:GenerateGUID() → string</code>
+                            <span class="api-badge">HttpService</span>
+                        </div>
+                        <p class="api-desc">Gera um identificador único global.</p>
+                    </div>
+                </div>
+
+                <h3 id="servicesTween">TweenService</h3>
+                <div class="api-group">
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">ts:Create(inst, tweenInfo, goal) → tween</code>
+                            <span class="api-badge">TweenService</span>
+                        </div>
+                        <p class="api-desc">Cria uma animação. <code>tweenInfo</code> aceita <code>Time</code>, <code>EasingStyle</code>, <code>EasingDirection</code>, <code>RepeatCount</code> e <code>Reverses</code>; <code>goal</code> é uma tabela de propriedades alvo. A animação só começa com <code>:Play()</code>.</p>
+                        <div class="code-block">
+                            <pre><code>local ts = game:GetService("TweenService")
+local part = game.Workspace:FindFirstChild("Part")
+if part then
+    local tween = ts:Create(part, {
+        Time = 1.5,
+        EasingStyle = "Quad",
+        EasingDirection = "Out",
+    }, {
+        Position = Vector3.new(100, 50, 0),
+    })
+    tween:Play()
+    print("estado:", tween.PlaybackState) -- "Playing"
+end</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">tween:Play() · tween:Pause() · tween:Cancel()</code>
+                            <span class="api-badge">Tween</span>
+                        </div>
+                        <p class="api-desc">Controla a animação. <code>Cancel</code> leva a parte direto ao estado final.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">tween.Duration · tween.PlaybackState · tween.Instance</code>
+                            <span class="api-badge">Tween</span>
+                        </div>
+                        <p class="api-desc">Duração (segundos), estado atual (<code>"Playing"</code> / <code>"Completed"</code>) e a instância animada.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">ts:GetTweens(inst) → {tween...}</code>
+                            <span class="api-badge">TweenService</span>
+                        </div>
+                        <p class="api-desc">Retorna os tweens ativos de uma instância.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Global Functions -->
+            <section id="globals" class="section">
+                <h2 id="globalsTitle">Funções Globais</h2>
+                <p id="globalsDesc">Funções de nível global adicionadas ao ambiente Lua.</p>
+
+                <div class="api-group">
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">identifyexecutor() → nome, versão</code>
+                            <span class="api-badge">Global</span>
+                        </div>
+                        <p class="api-desc">Retorna o nome e a versão do executor.</p>
+                        <div class="code-block">
+                            <pre><code>local nome, versao = identifyexecutor()
+print(nome, versao)  -- fragment  1.0.0</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">getmousepos() → {x, y}</code>
+                            <span class="api-badge">Global</span>
+                        </div>
+                        <p class="api-desc">Posição do mouse. Retorna tabela <strong>posicional</strong>: <code>pos[1]</code> = x, <code>pos[2]</code> = y.</p>
+                        <div class="code-block">
+                            <pre><code>local pos = getmousepos()
+print("x:", pos[1], "y:", pos[2])</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">iskeypressed(virtual_key) → boolean</code>
+                            <span class="api-badge">Global</span>
+                        </div>
+                        <p class="api-desc">Verifica se uma tecla virtual está pressionada. Ex.: 0x01 (botão esquerdo), 0x02 (direito), 0x57 (W).</p>
+                        <div class="code-block">
+                            <pre><code>game.RunService.RenderStepped:Connect(function()
+    if iskeypressed(0x02) then  -- botão direito
+        print("botão direito pressionado")
+    end
+end)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">spawn(fn, ...) / wait(seconds)</code>
+                            <span class="api-badge">Global</span>
+                        </div>
+                        <p class="api-desc">Equivalente a <code>task.spawn</code> e <code>task.wait</code>. Agenda uma função em nova corrotina e suspende a execução por um intervalo.</p>
+                        <div class="code-block">
+                            <pre><code>spawn(function()
+    for i = 1, 5 do
+        print("contagem:", i)
+        wait(0.5)
+    end
+end)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">getrawkeys(table) → {keys}</code>
+                            <span class="api-badge">Global</span>
+                        </div>
+                        <p class="api-desc">Retorna uma lista com todas as chaves de uma tabela, ignorando metatables.</p>
+                        <div class="code-block">
+                            <pre><code>local t = { a = 1, b = 2, c = 3 }
+for _, k in ipairs(getrawkeys(t)) do
+    print(k)
+end</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">request(opts) → {StatusCode, Body, StatusMessage, Headers}</code>
+                            <span class="api-badge">Global</span>
+                        </div>
+                        <p class="api-desc">Executa uma requisição HTTP (mesmo comportamento de <code>http:Request</code>).</p>
+                        <div class="code-block">
+                            <pre><code>local res = request({
+    Url = "https://api.example.com/dados",
+    Method = "GET",
+    Headers = { ["Content-Type"] = "application/json" },
+    Timeout = 10000,
+})
+print(res.StatusCode, res.Body)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">HttpGet(url) → string</code>
+                            <span class="api-badge">Global</span>
+                        </div>
+                        <p class="api-desc">Requisição GET que retorna o corpo da resposta como string.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">cleardrawcache()</code>
+                            <span class="api-badge">Global</span>
+                        </div>
+                        <p class="api-desc">Remove todos os objetos de desenho da tela.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">getgenv() → table</code>
+                            <span class="api-badge">Global</span>
+                        </div>
+                        <p class="api-desc">Retorna a tabela de ambiente global do executor (persiste entre scripts).</p>
+                        <div class="code-block">
+                            <pre><code>getgenv().minha_config = { cor = "vermelho" }
+print(getgenv().minha_config.cor)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">isrbxactive() → boolean</code>
+                            <span class="api-badge">Global</span>
+                        </div>
+                        <p class="api-desc">Verifica se a janela do jogo está em primeiro plano.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Task & Input -->
+            <section id="tasks" class="section">
+                <h2 id="tasksTitle">task & input</h2>
+                <p id="tasksDesc">Agendamento de tarefas (<code>task</code>) e leitura de entrada (<code>input</code>).</p>
+
+                <div class="api-group">
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">task.spawn(fn, ...)</code>
+                            <span class="api-badge">task</span>
+                        </div>
+                        <p class="api-desc">Executa a função imediatamente em uma nova corrotina.</p>
+                        <div class="code-block">
+                            <pre><code>task.spawn(function(msg)
+    print(msg)
+end, "olá")</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">task.defer(fn, ...)</code>
+                            <span class="api-badge">task</span>
+                        </div>
+                        <p class="api-desc">Agenda a função para execução no próximo tick.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">task.delay(seconds, fn, ...)</code>
+                            <span class="api-badge">task</span>
+                        </div>
+                        <p class="api-desc">Agenda a função após um atraso em segundos.</p>
+                        <div class="code-block">
+                            <pre><code>task.delay(2, function()
+    print("2 segundos depois")
+end)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">task.wait(seconds) → double</code>
+                            <span class="api-badge">task</span>
+                        </div>
+                        <p class="api-desc">Suspende a corrotina atual pelo tempo especificado (retorna o tempo esperado).</p>
+                        <div class="code-block">
+                            <pre><code>for i = 1, 3 do
+    print("tick", i)
+    task.wait(1)
+end</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">input.mouse_position() → {x, y}</code>
+                            <span class="api-badge">input</span>
+                        </div>
+                        <p class="api-desc">Posição do mouse. Tabela posicional: <code>pos[1]</code> = x, <code>pos[2]</code> = y.</p>
+                        <div class="code-block">
+                            <pre><code>local pos = input.mouse_position()
+print("mouse:", pos[1], pos[2])</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">input.is_key_down(virtual_key) → boolean</code>
+                            <span class="api-badge">input</span>
+                        </div>
+                        <p class="api-desc">Verifica se uma tecla virtual está pressionada.</p>
+                        <div class="code-block">
+                            <pre><code>if input.is_key_down(0x57) then  -- W
+    print("andando")
+end</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Data Types -->
+            <section id="types" class="section">
+                <h2 id="typesTitle">Tipos de Dados</h2>
+                <p id="typesDesc">Vetores e transformações são representados por <strong>tabelas Lua comuns</strong> (campos nomeados). Eles não são objetos: não possuem métodos próprios e não suportam aritmética — a única exceção é <code>CFrame</code>, que tem metatable com <code>+</code>, <code>*</code> e <code>__tostring</code>.</p>
+
+                <div class="api-group">
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">Vector3.new(x, y, z) → {x, y, z}</code>
+                            <span class="api-badge">Type</span>
+                        </div>
+                        <p class="api-desc">Cria um vetor 3D com campos <code>x</code>, <code>y</code> e <code>z</code>. Aceita um argumento único repetido nos três eixos.</p>
+                        <div class="code-block">
+                            <pre><code>local v = Vector3.new(10, 20, 30)
+print(v.x, v.y, v.z)  -- 10 20 30
+-- sem operadores: use manualmente
+local soma = { x = v.x + 1, y = v.y + 1, z = v.z + 1 }</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">Vector2.new(x, y) → {x, y}</code>
+                            <span class="api-badge">Type</span>
+                        </div>
+                        <p class="api-desc">Cria um vetor 2D com campos <code>x</code> e <code>y</code>.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">Color3.new(r, g, b) → {r, g, b}</code>
+                            <span class="api-badge">Type</span>
+                        </div>
+                        <p class="api-desc">Cria uma cor RGB com componentes de 0.0 a 1.0. Aceita um argumento único repetido.</p>
+                        <div class="code-block">
+                            <pre><code>local branco = Color3.new(1)         -- {r=1, g=1, b=1}
+local vermelho = Color3.new(1, 0, 0) -- {r=1, g=0, b=0}</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">UDim.new(scale, offset) → {scale, offset}</code>
+                            <span class="api-badge">Type</span>
+                        </div>
+                        <p class="api-desc">Unidade de tamanho/posição com escala e deslocamento em pixels. Resulta em tabela com campos <code>scale</code> e <code>offset</code>.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">UDim2.new(x_scale, x_offset, y_scale, y_offset) → {x_scale, x_offset, y_scale, y_offset}</code>
+                            <span class="api-badge">Type</span>
+                        </div>
+                        <p class="api-desc">Par de UDims. Campos: <code>x_scale</code>, <code>x_offset</code>, <code>y_scale</code>, <code>y_offset</code>.</p>
+                        <div class="code-block">
+                            <pre><code>local u = UDim2.new(0, 100, 0.5, 0)
+print(u.x_scale, u.x_offset, u.y_scale, u.y_offset)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">CFrame.new(...) → {x, y, z, R00..R22}</code>
+                            <span class="api-badge">Type</span>
+                        </div>
+                        <p class="api-desc">Cria um frame de coordenadas. Variantes: sem argumentos (identidade), <code>CFrame.new(from, to)</code>, <code>CFrame.new(x, y, z)</code> e a forma com matriz <code>(x, y, z, R00, R01, R02, R10, R11, R12, R20, R21, R22)</code>.</p>
+                        <div class="code-block">
+                            <pre><code>local cf = CFrame.new(0, 5, 0)
+print(cf.x, cf.y, cf.z)            -- 0 5 0
+print(tostring(cf))                -- usa __tostring da metatable</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">CFrame.lookAt(from, to)</code>
+                            <span class="api-badge">Type</span>
+                        </div>
+                        <p class="api-desc">Cria um CFrame em <code>from</code> apontando para <code>to</code>. As entradas podem ser tabelas nomeadas ou retornos de <code>Vector3.new</code>.</p>
+                        <div class="code-block">
+                            <pre><code>local cf = CFrame.lookAt({x=0,y=0,z=0}, {x=10,y=0,z=0})
+print(cf.LookVector.x, cf.LookVector.y, cf.LookVector.z)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">cf.Position / cf.P · cf.LookVector · cf.RightVector · cf.UpVector · cf.BackVector</code>
+                            <span class="api-badge">CFrame</span>
+                        </div>
+                        <p class="api-desc">Componentes do frame. <code>Position</code>/<code>P</code> retorna <code>{x, y, z}</code>; os vetores direcionais (com <code>XVector</code>/<code>YVector</code>/<code>ZVector</code> como nomes alternativos) são unitários.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">cf:ToEulerAnglesXYZ() → x, y, z</code>
+                            <span class="api-badge">CFrame</span>
+                        </div>
+                        <p class="api-desc">Converte a rotação em ângulos de Euler (radianos).</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">cf:Inverse() → CFrame</code>
+                            <span class="api-badge">CFrame</span>
+                        </div>
+                        <p class="api-desc">Retorna o frame inverso.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">cf1 + vetor · cf * vetor · cf1 * cf2</code>
+                            <span class="api-badge">CFrame</span>
+                        </div>
+                        <p class="api-desc">Operadores da metatable: <code>+</code> translada (aceita <code>{x,y,z}</code> ou resultado de <code>Vector3.new</code>), <code>*</code> transforma um vetor ou compõe dois frames.</p>
+                        <div class="code-block">
+                            <pre><code>local cf = CFrame.new(1, 2, 3)
+local movido = cf + {x = 10, y = 0, z = 0}
+print(movido.x, movido.y, movido.z)  -- 11 2 3</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- bit32 -->
+            <section id="bit32" class="section">
+                <h2 id="bit32Title">Biblioteca bit32</h2>
+                <p id="bit32Desc">Operações bit a bit sobre inteiros de 32 bits.</p>
+
+                <div class="api-group">
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">bit32.band(a, ...) · bit32.bor(a, ...) · bit32.bxor(a, ...) · bit32.bnot(a)</code>
+                            <span class="api-badge">bit32</span>
+                        </div>
+                        <p class="api-desc">Operações lógicas AND, OR, XOR e NOT bit a bit.</p>
+                        <div class="code-block">
+                            <pre><code>print(bit32.band(0xFF, 0x0F))  -- 15
+print(bit32.bor(0x0F, 0xF0))   -- 255</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">bit32.btest(a, ...) → boolean</code>
+                            <span class="api-badge">bit32</span>
+                        </div>
+                        <p class="api-desc">Equivalente a <code>band(a, ...) ~= 0</code>.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">bit32.lshift(a, n) · bit32.rshift(a, n) · bit32.arshift(a, n)</code>
+                            <span class="api-badge">bit32</span>
+                        </div>
+                        <p class="api-desc">Deslocamentos à esquerda, à direita (lógico) e aritmético.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">bit32.lrotate(a, n) · bit32.rrotate(a, n)</code>
+                            <span class="api-badge">bit32</span>
+                        </div>
+                        <p class="api-desc">Rotações circulares de bits.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">bit32.extract(n, field, width) · bit32.replace(n, v, field, width)</code>
+                            <span class="api-badge">bit32</span>
+                        </div>
+                        <p class="api-desc">Extrai e substitui campos de bits (width padrão 1).</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">bit32.tobit(x) → int</code>
+                            <span class="api-badge">bit32</span>
+                        </div>
+                        <p class="api-desc">Normaliza um número para um inteiro de 32 bits com sinal.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Signals -->
+            <section id="events" class="section">
+                <h2 id="eventsTitle">Sinais e Conexões</h2>
+                <p id="eventsDesc">Conecte funções a eventos. <code>Connect</code> retorna uma conexão que pode ser desconectada com <code>:Disconnect()</code>.</p>
+
+                <div class="api-group">
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">signal:Connect(fn) → connection</code>
+                            <span class="api-badge">Signal</span>
+                        </div>
+                        <p class="api-desc">Registra uma função para ser chamada quando o evento disparar.</p>
+                        <div class="code-block">
+                            <pre><code>game.Players.PlayerAdded:Connect(function(player)
+    print("player entrou:", player.Name)
+    player.CharacterAdded:Connect(function(character)
+        print("character:", character.Name)
+    end)
+end)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">connection:Disconnect()</code>
+                            <span class="api-badge">Signal</span>
+                        </div>
+                        <p class="api-desc">Desconecta a função do evento.</p>
+                        <div class="code-block">
+                            <pre><code>local rs = game:GetService("RunService")
+local conn = rs.RenderStepped:Connect(function() end)
+task.delay(5, function()
+    conn:Disconnect()  -- para de ser chamado
+end)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">connection:Fire(instance?)</code>
+                            <span class="api-badge">Signal</span>
+                        </div>
+                        <p class="api-desc">Dispara manualmente a conexão com um argumento opcional.</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">game.RunService.RenderStepped:Connect(fn)</code>
+                            <span class="api-badge">RunService</span>
+                        </div>
+                        <p class="api-desc">Chamado a cada frame com o <code>delta_time</code> como argumento.</p>
+                        <div class="code-block">
+                            <pre><code>game.RunService.RenderStepped:Connect(function(dt)
+    -- dt = tempo desde o último frame (ex.: 0.016)
+end)</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">game.RunService.Heartbeat:Connect(fn)</code>
+                            <span class="api-badge">RunService</span>
+                        </div>
+                        <p class="api-desc">Chamado a cada frame com o tempo de execução acumulado (segundos desde o início).</p>
+                    </div>
+
+                    <div class="api-item">
+                        <div class="api-header">
+                            <code class="api-sig">inst:GetPropertyChangedSignal(prop) → signal</code>
+                            <span class="api-badge">Instance</span>
+                        </div>
+                        <p class="api-desc">Dispara quando uma propriedade da instância é alterada via Lua.</p>
+                        <div class="code-block">
+                            <pre><code>local part = game.Workspace:FindFirstChild("Part")
+if part then
+    part:GetPropertyChangedSignal("Position"):Connect(function()
+        print("Posição alterada!")
+    end)
+    task.delay(1, function()
+        part.Position = { x = 99, y = 0, z = 0 }
+    end)
+end</code></pre>
+                        </div>
                     </div>
                 </div>
             </section>
 
             <!-- Examples -->
             <section id="examples" class="section">
-                <h2 id="examplesTitle">Exemplos de Código</h2>
+                <h2 id="examplesTitle">Exemplos Completos</h2>
+                <p class="section-hint">Scripts prontos para copiar, colar e executar no Lua Editor. Teste um de cada vez.</p>
 
-                <h3 id="examplesUI">Criar Painel de Configurações</h3>
+                <h3 id="examplesUI">Painel de Configurações (menu)</h3>
                 <div class="code-block">
-                    <pre><code>-- Criar aba de configurações
-local tab_id = ui.create_tab("ui example")
-ui.clear_tab(tab_id)
+                    <pre><code>local tab = ui.create_tab("Config")
+ui.clear_tab(tab)
 
-ui.checkbox(tab_id, "enabled", "Enabled", true)
-ui.colorpicker(tab_id, "accent", "Accent", { 0.15, 0.7, 1.0, 1.0 })
+ui.checkbox(tab, "enabled", "Enabled", true)
+ui.colorpicker(tab, "accent", "Accent", { 0.15, 0.7, 1.0, 1.0 })
+ui.checkbox(tab, "show_boxes", "Show Boxes", false)
+ui.keybind(tab, "aim_key", "Aim Key", 0x02, 0)
+ui.dropdown(tab, "mode", "Mode", { "Closest", "Fov", "Distance" }, 0)
+ui.slider(tab, "fov", "Fov", 25, 500, 120)
+ui.button(tab, "log", "Log values", function()
+    print("enabled:", ui.get(tab, "enabled"))
+    print("fov:", ui.get(tab, "fov"))
+    print("mode:", ui.get(tab, "mode"))
+end)
 
-ui.checkbox(tab_id, "show_boxes", "Show Boxes", false)
-ui.colorpicker(tab_id, "outline", "Outline", { 1.0, 1.0, 1.0, 1.0 })
-
-ui.checkbox(tab_id, "hold_to_aim", "Hold To Aim", true)
-ui.keybind(tab_id, "aim_key", "Aim Key", 0x02, 0)
-
-ui.checkbox(tab_id, "toggle_menu", "Toggle Menu", true)
-ui.keybind(tab_id, "menu_key", "Menu Key", 0x2D, 1)
-
-ui.dropdown(tab_id, "mode", "Mode", { "Closest", "Fov", "Distance" }, 0)
-ui.dropdown(tab_id, "hitpart", "Hitpart", { "Head", "Torso", "HumanoidRootPart" }, 0)
-
-ui.slider(tab_id, "fov", "Fov", 25, 500, 120)
-ui.slider(tab_id, "smoothness", "Smoothness", 1, 100, 20)</code></pre>
-                </div>
-
-                <h3 id="examplesDrawing">Desenhar na Tela</h3>
-                <div class="code-block">
-                    <pre><code>-- Criar caixa vermelha
-local box = Drawing:CreateObject("square")
-box.position = {x = 100, y = 100}
-box.size = {x = 150, y = 100}
-box.color = {r = 1, g = 0, b = 0, a = 1}
-box.thickness = 2
-box.filled = false
-
--- Criar texto
-local text = Drawing:CreateObject("text")
-text.position = {x = 110, y = 110}
-text.text = "PLAYER 1"
-text.text_size = 16
-text.color = {r = 1, g = 1, b = 1, a = 1}
-
--- Renderizar
-Drawing:RenderAll()</code></pre>
-                </div>
-
-                <h3 id="examplesInstances">Trabalhar com Instâncias</h3>
-                <div class="code-block">
-                    <pre><code>-- Obter workspace
-local workspace = game:GetService("Workspace")
-
--- Encontrar player
-local player = workspace:FindFirstChild("Player1")
-if player then
-    print("Encontrado: " .. player:GetName())
-
-    -- Definir atributos
-    player:SetAttribute("health", 100)
-    player:SetAttribute("team", "red")
-
-    -- Obter todos os filhos
-    local children = player:GetChildren()
-    for _, child in ipairs(children) do
-        print("Filho: " .. child:GetName())
+game.RunService.RenderStepped:Connect(function()
+    if ui.get(tab, "enabled") then
+        -- lê o fov continuamente
     end
+end)</code></pre>
+                </div>
+
+                <h3 id="examplesDrawing">Desenhar e Seguir o Mouse</h3>
+                <div class="code-block">
+                    <pre><code>-- Caixa que segue o cursor (renderização automática)
+local box = Drawing.new("square")
+box.Size = {8, 8}
+box.Color = {1, 0.3, 0.3, 1}
+box.Filled = true
+
+local txt = Drawing.new("text")
+txt.Text = "PHANTOM"
+txt.TextSize = 14
+txt.Center = true
+
+game.RunService.RenderStepped:Connect(function()
+    local m = input.mouse_position()
+    box.Position = { m[1] - 4, m[2] - 4 }
+    txt.Position = { m[1], m[2] - 20 }
+end)
+
+task.delay(10, function()
+    cleardrawcache()  -- limpa tudo da tela
+end)</code></pre>
+                </div>
+
+                <h3 id="examplesInstances">Ler Dados do Jogo</h3>
+                <div class="code-block">
+                    <pre><code>-- Lista players e lê atributos
+local players = game.Players
+print("total de players:", #players:GetPlayers())
+
+local me = players.LocalPlayer
+if me then
+    print("eu sou:", me.Name)
+    me:SetAttribute("health", 100)
+    print("health:", me:GetAttribute("health"))
+end
+
+-- Lista os filhos diretos do workspace
+for _, child in ipairs(workspace:GetChildren()) do
+    print("no workspace:", child.Name)
 end</code></pre>
+                </div>
+
+                <h3 id="examplesTween">Animar uma Parte</h3>
+                <div class="code-block">
+                    <pre><code>local ts = game:GetService("TweenService")
+local part = Instance.new("Part")
+part.Name = "Alvo"
+part.Position = Vector3.new(0, 5, 0)
+part.Parent = workspace
+
+local tween = ts:Create(part, {
+    Time = 1.5,
+    EasingStyle = "Quad",
+    EasingDirection = "Out",
+}, {
+    Position = Vector3.new(100, 50, 0),
+})
+
+tween:Play()
+print("estado:", tween.PlaybackState)  -- Playing
+
+task.wait(1)
+tween:Pause()
+task.wait(1)
+tween:Play()
+
+-- cancela tudo depois de 4 segundos
+task.delay(4, function()
+    tween:Cancel()
+    part.Parent = nil  -- remove do workspace
+end)</code></pre>
+                </div>
+
+                <h3 id="examplesEvents">Eventos</h3>
+                <div class="code-block">
+                    <pre><code>-- Contador de segundos usando heartbeat
+local tempo = 0
+game.RunService.Heartbeat:Connect(function(acumulado)
+    if acumulado - tempo >= 1 then
+        print("segundo passado")
+        tempo = acumulado
+    end
+end)
+
+-- PlayerAdded
+game.Players.PlayerAdded:Connect(function(player)
+    print("Jogador entrou:", player.Name)
+end)
+
+-- Desconecta um evento depois de um tempo
+local conn = game.RunService.RenderStepped:Connect(function()
+end)
+task.delay(5, function()
+    conn:Disconnect()
+end)</code></pre>
+                </div>
+
+                <h3 id="examplesHttp">Requisição HTTP</h3>
+                <div class="code-block">
+                    <pre><code>local http = game:GetService("HttpService")
+
+-- GET simples
+local corpo = http:GetAsync("https://api.example.com/status")
+print(corpo)
+
+-- Requisição completa (acessa a resposta)
+local res = http:Request({
+    Url = "https://api.example.com/dados",
+    Method = "GET",
+    Headers = { ["Accept"] = "application/json" },
+})
+print(res.StatusCode, res.StatusMessage)
+print(res.Body)</code></pre>
                 </div>
             </section>
 
@@ -501,37 +1461,61 @@ end</code></pre>
             <section id="reference" class="section">
                 <h2 id="refTitle">Referência de Estruturas</h2>
 
-                <h3>Color Value</h3>
+                <h3>Color Value (drawing / colorpicker)</h3>
                 <div class="code-block">
-                    <pre><code>struct color_value {
-    float r = 1.0f;  // Vermelho (0.0 - 1.0)
-    float g = 1.0f;  // Verde (0.0 - 1.0)
-    float b = 1.0f;  // Azul (0.0 - 1.0)
-    float a = 1.0f;  // Alpha (0.0 - 1.0)
-};</code></pre>
+                    <pre><code>-- Representado como tabela POSICIONAL com 4 números:
+--   { r, g, b, a }   (0.0 - 1.0)
+local vermelho = { 1, 0, 0, 1 }
+
+-- Usado assim no Drawing:
+local box = Drawing.new("square")
+box.Color = vermelho
+
+-- Obs.: cores de colorpicker NÃO são legíveis via ui.get (retorna nil).</code></pre>
                 </div>
 
-                <h3>Vector2 Value</h3>
+                <h3>Vector2 (posição/size de drawing, GetMouseLocation)</h3>
                 <div class="code-block">
-                    <pre><code>struct vector2_value {
-    float x = 0.0f;
-    float y = 0.0f;
-};</code></pre>
+                    <pre><code>-- Representado como tabela POSICIONAL com 2 números:
+--   { x, y }
+local pos = input.mouse_position()
+print(pos[1], pos[2])  -- x, y</code></pre>
                 </div>
 
                 <h3>Keybind Value</h3>
                 <div class="code-block">
-                    <pre><code>struct keybind_value {
-    int key = 0;           // Código de tecla virtual
-    int mode = 0;          // Modo de ligação
-    bool enabled = false;  // Estado ativo
-};</code></pre>
+                    <pre><code>-- ui.keybind(tab, "key", "label", tecla, modo)
+--   tecla: código de tecla virtual (ex.: 0x02 = botão direito)
+--   modo : 0 = hold, 1 = toggle
+ui.keybind(tab, "aim_key", "Aim Key", 0x02, 0)
+
+-- Obs.: o valor do keybind NÃO é legível via ui.get (retorna nil).</code></pre>
+                </div>
+
+                <h3>Attribute Value</h3>
+                <div class="code-block">
+                    <pre><code>-- Atributos aceitam:
+--   boolean, number, string, nil
+--   Vector3: { x, y, z }
+--   Color3:  { r, g, b }
+--   CFrame:  { x, y, z, R00, R01, R02, R10, R11, R12, R20, R21, R22 }
+inst:SetAttribute("exemplo", { x = 1, y = 2, z = 3 })</code></pre>
+                </div>
+
+                <h3>CFrame Matrix</h3>
+                <div class="code-block">
+                    <pre><code>-- Um CFrame armazena a matriz 4x3 (12 componentes):
+--   x, y, z            → posição
+--   R00, R01, R02      → primeira linha da rotação (eixo X)
+--   R10, R11, R12      → segunda linha da rotação (eixo Y)
+--   R20, R21, R22      → terceira linha da rotação (eixo Z)
+local cf = CFrame.new(0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1)</code></pre>
                 </div>
             </section>
 
             <!-- Footer -->
             <footer class="footer">
-                <p id="footerText">&copy; 2026 Phantom Lua API Documentation v1.0</p>
+                <p id="footerText">&copy; 2026 Phantom Lua API Documentation v1.1</p>
             </footer>
         </main>
     </div>
